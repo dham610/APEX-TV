@@ -75,7 +75,12 @@ internal data class SportsHubUiState(
     val excludedSports: Set<String> = emptySet(),
     val excludedLeagues: Set<String> = emptySet(),
     val knownLeagues: Map<String, String> = emptyMap(),
+    val followedTeams: List<FollowedTeam> = emptyList(),
+    val showMyTeamsOnly: Boolean = false,
 )
+
+/** APEX TV: a team the user follows. [canonicalName] matches [SportsCompetitor.canonicalName]. */
+internal data class FollowedTeam(val canonicalName: String, val displayName: String)
 
 internal fun shouldRefreshSportsOnClock(
     range: SportsTimeRange,
@@ -135,6 +140,30 @@ internal class SportsHubRepository @Inject constructor(
     private var progressiveLoad = true
 
     init {
+        scope.launch {
+            // First run: start with Darryn's teams. After that the saved list (even if empty) wins.
+            if (!preferencesRepository.hasFollowedTeamsSetting()) {
+                listOf(
+                    "Los Angeles Lakers",
+                    "Los Angeles Dodgers",
+                    "Los Angeles Chargers",
+                    "Las Vegas Aces",
+                    "USC Trojans",
+                ).forEach { name ->
+                    preferencesRepository.setTeamFollowed(SportsAliasRegistry.normalizeTeamName(name), name, true)
+                }
+            }
+        }
+        scope.launch {
+            preferencesRepository.getFollowedTeams().collect { stored ->
+                val teams = stored.mapNotNull { entry ->
+                    val canonical = entry.substringBefore('|')
+                    val display = entry.substringAfter('|', canonical)
+                    if (canonical.isBlank()) null else FollowedTeam(canonical, display)
+                }.sortedBy { it.displayName.lowercase() }
+                _uiState.update { it.copy(followedTeams = teams) }
+            }
+        }
         scope.launch {
             combine(preferencesRepository.getExcludedSports(), preferencesRepository.getExcludedSportsLeagues()) { sports, leagues ->
                 sports to leagues
@@ -365,6 +394,14 @@ internal class SportsHubRepository @Inject constructor(
 
     fun setLeagueIncluded(league: String, included: Boolean) {
         scope.launch { preferencesRepository.setSportsLeagueIncluded(league, included) }
+    }
+
+    fun setTeamFollowed(canonicalName: String, displayName: String, followed: Boolean) {
+        scope.launch { preferencesRepository.setTeamFollowed(canonicalName, displayName, followed) }
+    }
+
+    fun setShowMyTeamsOnly(enabled: Boolean) {
+        _uiState.update { it.copy(showMyTeamsOnly = enabled) }
     }
 
     fun resetInclusions() { scope.launch { preferencesRepository.resetSportsInclusions() } }

@@ -170,7 +170,7 @@ class AppNavigationCoordinator @Inject constructor(
     }
 
     fun onDestinationResumed(destination: AppDestination) {
-        if (destination !is AppDestination.LiveTv) return
+        if (destination !is AppDestination.LiveTv && destination !is AppDestination.Guide) return
         startupLiveDestinationResumed = true
         enqueueStartupPlayerIfReady()
     }

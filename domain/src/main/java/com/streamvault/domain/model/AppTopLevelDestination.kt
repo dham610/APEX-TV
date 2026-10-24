@@ -69,7 +69,8 @@ enum class AppTopLevelDestination(
                 }
                 .distinct()
                 .toMutableList()
-            if (LIVE_TV in normalized) {
+            // APEX TV: the Guide is the live browser now, so these start options belong to it too.
+            if (LIVE_TV in normalized || GUIDE in normalized) {
                 val liveTvIndex = available.indexOf(AppLandingDestination.LIVE_TV)
                 if (liveTvIndex >= 0) {
                     available.add(liveTvIndex + 1, AppLandingDestination.FIRST_FAVORITE_LIVE)

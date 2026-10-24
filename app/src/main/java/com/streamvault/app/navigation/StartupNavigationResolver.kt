@@ -5,6 +5,7 @@ import com.streamvault.core.navigation.PlayerNavigationRequest
 import com.streamvault.data.preferences.PreferencesRepository
 import com.streamvault.domain.model.ActiveLiveSource
 import com.streamvault.domain.model.AppLandingDestination
+import com.streamvault.domain.model.AppTopLevelDestination
 import com.streamvault.domain.model.ContentType
 import com.streamvault.domain.model.VirtualCategoryIds
 import com.streamvault.domain.repository.ChannelRepository
@@ -89,6 +90,9 @@ class StartupNavigationResolver @Inject constructor(
         val hiddenChannelIdsByProvider = sourceContext.providerIds.associateWith { providerId ->
             preferencesRepository.getHiddenChannelIds(providerId).first()
         }
+        // Back from the auto-started channel lands on the Guide when the Live TV tab is hidden.
+        val liveTvTabVisible = AppTopLevelDestination.LIVE_TV in preferencesRepository.appTopLevelDestinations.first()
+        val returnDestination: AppDestination = if (liveTvTabVisible) AppDestination.LiveTv() else AppDestination.Guide()
         for (channelId in channelIds.distinct()) {
             val channel = channelRepository.getChannel(channelId) ?: continue
             if (channel.providerId !in sourceContext.providerIds) continue
@@ -98,7 +102,7 @@ class StartupNavigationResolver @Inject constructor(
                 providerId = channel.providerId,
                 isVirtual = true,
                 combinedProfileId = (sourceContext as? LiveStartupContext.Combined)?.profileId,
-                returnDestination = AppDestination.LiveTv()
+                returnDestination = returnDestination
             )
         }
         return null
@@ -133,9 +137,9 @@ class StartupNavigationResolver @Inject constructor(
 
 private fun AppLandingDestination.toAppDestination(): AppDestination = when (this) {
     AppLandingDestination.HOME -> AppDestination.Home
-    AppLandingDestination.LIVE_TV,
+    AppLandingDestination.LIVE_TV -> AppDestination.LiveTv()
     AppLandingDestination.FIRST_FAVORITE_LIVE,
-    AppLandingDestination.LAST_WATCHED_LIVE -> AppDestination.LiveTv()
+    AppLandingDestination.LAST_WATCHED_LIVE -> AppDestination.Guide()
     AppLandingDestination.SPORTS -> AppDestination.Sports
     AppLandingDestination.MOVIES -> AppDestination.Movies
     AppLandingDestination.SERIES -> AppDestination.Series

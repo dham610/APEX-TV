@@ -51,6 +51,22 @@ internal object SportsAliasRegistry {
         "gs warriors" to "golden state warriors",
         "golden state" to "golden state warriors",
         "golden state warriors" to "golden state warriors",
+        // APEX TV: Darryn's teams, with the short names providers and guides commonly use.
+        "lakers" to "los angeles lakers",
+        "dodgers" to "los angeles dodgers",
+        "la dodgers" to "los angeles dodgers",
+        "los angeles dodgers" to "los angeles dodgers",
+        "chargers" to "los angeles chargers",
+        "la chargers" to "los angeles chargers",
+        "los angeles chargers" to "los angeles chargers",
+        "aces" to "las vegas aces",
+        "vegas aces" to "las vegas aces",
+        "lv aces" to "las vegas aces",
+        "las vegas aces" to "las vegas aces",
+        "usc" to "usc trojans",
+        "trojans" to "usc trojans",
+        "southern california trojans" to "usc trojans",
+        "usc trojans" to "usc trojans",
     )
 
     fun normalizeTeamName(value: String): String {

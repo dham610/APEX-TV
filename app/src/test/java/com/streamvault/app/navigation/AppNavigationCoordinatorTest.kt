@@ -88,9 +88,9 @@ class AppNavigationCoordinatorTest {
         coordinator.acknowledge(10L)
         coordinator.onDestinationResumed(AppDestination.Home)
         assertThat(coordinator.pendingCommand.value).isNull()
-        coordinator.onDestinationResumed(AppDestination.LiveTv())
+        coordinator.onDestinationResumed(AppDestination.Guide())
         assertThat(coordinator.pendingCommand.value?.id).isEqualTo(11L)
-        coordinator.onDestinationResumed(AppDestination.LiveTv())
+        coordinator.onDestinationResumed(AppDestination.Guide())
         assertThat(coordinator.pendingCommand.value?.id).isEqualTo(11L)
     }
 
@@ -104,7 +104,7 @@ class AppNavigationCoordinatorTest {
         runCurrent()
 
         coordinator.requestStartupNavigation(AppDestination.Welcome)
-        coordinator.onDestinationResumed(AppDestination.LiveTv())
+        coordinator.onDestinationResumed(AppDestination.Guide())
         coordinator.acknowledge(10L)
 
         assertThat(coordinator.pendingCommand.value?.id).isEqualTo(11L)
@@ -126,7 +126,7 @@ class AppNavigationCoordinatorTest {
         runCurrent()
 
         assertThat(coordinator.state.value.startupTarget?.destination)
-            .isEqualTo(AppDestination.LiveTv())
+            .isEqualTo(AppDestination.Guide())
         activeLiveSource.complete(null)
     }
 
@@ -145,7 +145,7 @@ class AppNavigationCoordinatorTest {
 
         coordinator.requestStartupNavigation(AppDestination.Welcome)
         coordinator.acknowledge(10L)
-        coordinator.onDestinationResumed(AppDestination.LiveTv())
+        coordinator.onDestinationResumed(AppDestination.Guide())
         assertThat(coordinator.pendingCommand.value).isNull()
 
         activeLiveSource.complete(ActiveLiveSource.ProviderSource(7L))

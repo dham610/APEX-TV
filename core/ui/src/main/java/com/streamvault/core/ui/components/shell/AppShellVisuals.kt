@@ -292,7 +292,7 @@ private fun TopNavigationBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "StreamVault",
+                text = "APEX TV",
                 style = MaterialTheme.typography.titleSmall.copy(letterSpacing = (-0.4).sp),
                 color = BrowseColors.TextPrimary,
                 modifier = Modifier.wrapContentWidth(Alignment.Start)

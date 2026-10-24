@@ -243,6 +243,22 @@ class PreferencesRepository @Inject constructor(
         }.toMap()
     }
 
+    suspend fun hasFollowedTeamsSetting(): Boolean =
+        preferencesDataStore.data.first().contains(stringSetPreferencesKey("apex_followed_teams"))
+
+    /** APEX TV: followed teams, stored as "canonicalName|Display Name". */
+    fun getFollowedTeams(): Flow<Set<String>> = preferencesDataStore.data.map {
+        it[stringSetPreferencesKey("apex_followed_teams")].orEmpty()
+    }
+
+    suspend fun setTeamFollowed(canonicalName: String, displayName: String, followed: Boolean) {
+        preferencesDataStore.edit { values ->
+            val key = stringSetPreferencesKey("apex_followed_teams")
+            val others = values[key].orEmpty().filterNot { it.substringBefore('|') == canonicalName }.toSet()
+            values[key] = if (followed) others + "$canonicalName|$displayName" else others
+        }
+    }
+
     fun getExcludedSports(): Flow<Set<String>> = preferencesDataStore.data.map {
         it[stringSetPreferencesKey("sports_excluded_sports")].orEmpty()
     }

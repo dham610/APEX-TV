@@ -126,6 +126,8 @@ fun SportsHubScreen(
             onForgetChannelForEvent = viewModel::forgetChannelForEvent,
             onLoadStandings = viewModel::loadStandings,
             onLoadExtraDetails = viewModel::loadExtraDetails,
+            onSetTeamFollowed = viewModel::setTeamFollowed,
+            onSetMyTeamsOnly = viewModel::setShowMyTeamsOnly,
             onPlayBroadcast = { broadcast ->
                 onPlaybackRequested(
                     LiveChannelPlaybackRequest(
@@ -161,7 +163,10 @@ internal fun SportsHubContent(
     onLoadStandings: suspend (SportsEvent) -> LoadedSportsStandings?,
     onLoadExtraDetails: suspend (SportsEvent) -> LoadedSportsEventExtraDetails?,
     onPlayBroadcast: (SportsBroadcast) -> Unit,
+    onSetTeamFollowed: (String, String, Boolean) -> Unit = { _, _, _ -> },
+    onSetMyTeamsOnly: (Boolean) -> Unit = {},
 ) {
+    var teamsOpen by remember { mutableStateOf(false) }
     var detailsEvent by remember { mutableStateOf<SportsEvent?>(null) }
     var manualPickerEvent by remember { mutableStateOf<SportsEvent?>(null) }
     val actionScope = rememberCoroutineScope()
@@ -205,7 +210,14 @@ internal fun SportsHubContent(
                     .padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                SportsDiscoverySearch(state.searchQuery, onSearchQueryChanged, onOpenInclusions = { inclusionsOpen = true }) {
+                SportsDiscoverySearch(
+                    state.searchQuery,
+                    onSearchQueryChanged,
+                    onOpenInclusions = { inclusionsOpen = true },
+                    myTeamsOnly = state.showMyTeamsOnly,
+                    onToggleMyTeams = { onSetMyTeamsOnly(!state.showMyTeamsOnly) },
+                    onOpenTeams = { teamsOpen = true },
+                ) {
                     SportsSportFilters(state.selectedSportFilter, onSelectSportFilter)
                 }
                 if (availableLeagues.isNotEmpty()) {
@@ -269,6 +281,9 @@ internal fun SportsHubContent(
                 }
             }
         }
+    }
+    if (teamsOpen) {
+        SportsTeamsDialog(state, onSetTeamFollowed) { teamsOpen = false }
     }
     if (inclusionsOpen) {
         SportsInclusionsDialog(state, onSetSportIncluded, onSetLeagueIncluded, onResetInclusions) { inclusionsOpen = false }

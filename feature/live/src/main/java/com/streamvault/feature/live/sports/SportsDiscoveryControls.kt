@@ -48,6 +48,9 @@ internal fun SportsDiscoverySearch(
     query: String,
     onQuery: (String) -> Unit,
     onOpenInclusions: () -> Unit,
+    myTeamsOnly: Boolean = false,
+    onToggleMyTeams: () -> Unit = {},
+    onOpenTeams: () -> Unit = {},
     filters: @Composable () -> Unit,
 ) {
     var searchOpen by remember { mutableStateOf(false) }
@@ -75,6 +78,22 @@ internal fun SportsDiscoverySearch(
                 Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(searchLabel, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            TvButton(
+                onClick = onToggleMyTeams,
+                modifier = Modifier.height(34.dp),
+                scale = ButtonDefaults.scale(focusedScale = 1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                Text(if (myTeamsOnly) "★ My teams: on" else "☆ My teams", fontSize = 11.sp, maxLines = 1)
+            }
+            TvButton(
+                onClick = onOpenTeams,
+                modifier = Modifier.height(34.dp),
+                scale = ButtonDefaults.scale(focusedScale = 1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                Text("Manage teams", fontSize = 11.sp, maxLines = 1)
             }
             TvButton(
                 onClick = onOpenInclusions,
@@ -189,6 +208,66 @@ internal fun SportsInclusionsDialog(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TvButton(onClick = onReset) { Text(stringResource(R.string.hidden_categories_dialog_unhide_all)) }
+                    Spacer(Modifier.weight(1f))
+                    TvButton(onClick = onDismiss) { Text(stringResource(R.string.hidden_categories_dialog_close)) }
+                }
+            }
+        }
+    }
+}
+
+/** APEX TV: pick the teams to follow. Tapping a team toggles it; teams from today's events are listed. */
+@Composable
+internal fun SportsTeamsDialog(
+    state: SportsHubUiState,
+    onToggleTeam: (canonicalName: String, displayName: String, followed: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val followedByName = state.followedTeams.associateBy { it.canonicalName }
+    val fromEvents = remember(state.events) {
+        state.events.flatMap { it.competitors }
+            .filter { it.canonicalName.isNotBlank() }
+            .associate { it.canonicalName to it.displayName }
+    }
+    val normalizedQuery = SportsTextNormalizer.normalize(query)
+    val candidates = (fromEvents + followedByName.mapValues { it.value.displayName })
+        .entries
+        .filter { normalizedQuery.isBlank() || SportsTextNormalizer.normalize(it.value).contains(normalizedQuery) }
+        .sortedWith(compareByDescending<Map.Entry<String, String>> { it.key in followedByName }.thenBy { it.value.lowercase() })
+    val typedCanonical = SportsAliasRegistry.normalizeTeamName(query.trim())
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            modifier = Modifier.padding(24.dp).widthIn(max = 720.dp).fillMaxHeight(0.92f),
+            colors = SurfaceDefaults.colors(containerColor = BrowseColors.SurfaceElevated),
+            shape = BrowseShapes.Panel,
+        ) {
+            Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("My teams", fontSize = 22.sp, color = BrowseColors.TextPrimary)
+                Text(
+                    "Pick the teams you follow. Turn on \"My teams\" in Sports to see only their games and the channels they are on. " +
+                        "Type a name to search, or to add a team that isn't listed.",
+                    fontSize = 12.sp, color = BrowseColors.TextSecondary,
+                )
+                OutlinedTextField(
+                    value = query, onValueChange = { query = it }, singleLine = true,
+                    label = { Text("Search or type a team name", color = BrowseColors.TextSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = sportsSearchColors(),
+                )
+                if (query.isNotBlank() && typedCanonical.isNotBlank() && typedCanonical !in followedByName && typedCanonical !in fromEvents) {
+                    TvButton(onClick = { onToggleTeam(typedCanonical, query.trim(), true); query = "" }) {
+                        Text("Add \"${query.trim()}\"")
+                    }
+                }
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(4.dp)) {
+                    items(candidates, key = { it.key }) { team ->
+                        InclusionRow(team.value, team.key in followedByName) {
+                            onToggleTeam(team.key, team.value, team.key !in followedByName)
+                        }
+                    }
+                }
+                Row {
                     Spacer(Modifier.weight(1f))
                     TvButton(onClick = onDismiss) { Text(stringResource(R.string.hidden_categories_dialog_close)) }
                 }

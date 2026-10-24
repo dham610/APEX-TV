@@ -38,6 +38,11 @@ class StartupNavigationResolverTest {
         providerRepository = providerRepository
     )
 
+    init {
+        whenever(preferencesRepository.appTopLevelDestinations)
+            .thenReturn(flowOf(com.streamvault.domain.model.AppTopLevelDestination.allDestinations))
+    }
+
     @Test
     fun homeReturnsTypedLandingWithoutPlayer() = runTest {
         val result = resolver.resolve(AppLandingDestination.HOME)
@@ -67,7 +72,7 @@ class StartupNavigationResolverTest {
 
         val result = resolver.resolve(AppLandingDestination.FIRST_FAVORITE_LIVE)
 
-        assertThat(result.destination).isEqualTo(com.streamvault.core.navigation.AppDestination.LiveTv())
+        assertThat(result.destination).isEqualTo(com.streamvault.core.navigation.AppDestination.Guide())
         assertThat(result.playerRequest?.internalId).isEqualTo(42L)
         assertThat(result.playerRequest?.categoryId).isEqualTo(VirtualCategoryIds.FAVORITES)
         assertThat(result.playerRequest?.returnDestination)
@@ -153,7 +158,7 @@ class StartupNavigationResolverTest {
 
         val result = resolver.resolve(AppLandingDestination.LAST_WATCHED_LIVE)
 
-        assertThat(result.destination).isEqualTo(com.streamvault.core.navigation.AppDestination.LiveTv())
+        assertThat(result.destination).isEqualTo(com.streamvault.core.navigation.AppDestination.Guide())
         assertThat(result.playerRequest).isNull()
     }
 

@@ -754,16 +754,9 @@ class DashboardViewModel @Inject constructor(
     private fun Movie.rawMovieIdsForDashboard(): List<Long> =
         variants.map { it.rawMovieId }.ifEmpty { listOf(id) }
 
-    private fun observeUpdateNotice(): Flow<DashboardUpdateNotice?> =
-        appUpdatePort.notice.map { notice ->
-            notice?.let {
-                DashboardUpdateNotice(
-                    latestVersionName = it.latestVersionName,
-                    downloadSha256 = it.downloadSha256,
-                    actionState = it.action
-                )
-            }
-        }
+    // APEX TV: the upstream update checker would advertise StreamVault releases, so the Home banner stays
+    // off until update checks point at APEX TV's own releases.
+    private fun observeUpdateNotice(): Flow<DashboardUpdateNotice?> = kotlinx.coroutines.flow.flowOf(null)
 
     private fun buildFeature(
         providerName: String,

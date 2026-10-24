@@ -17,6 +17,19 @@ internal fun sportsDescriptionForPresentation(description: String): String = des
 internal fun SportsEvent.matchesDiscovery(state: SportsHubUiState): Boolean {
     if (sport.discoveryKey in state.excludedSports || leagueFilterKey in state.excludedLeagues) return false
     if (!matches(state.selectedSportFilter)) return false
+    if (state.showMyTeamsOnly) {
+        val followed = state.followedTeams.map { it.canonicalName }.toSet()
+        val titleText = SportsTextNormalizer.normalize(title)
+        val involvesFollowedTeam = followed.isNotEmpty() && (
+            competitors.any { it.canonicalName in followed } ||
+                followed.any { team ->
+                    team.isNotBlank() && SportsAliasRegistry.aliasesForCanonical(team).any { alias ->
+                        " $titleText ".contains(" $alias ")
+                    }
+                }
+            )
+        if (!involvesFollowedTeam) return false
+    }
     if (state.selectedLeagueFilter != null && leagueFilterKey != state.selectedLeagueFilter) return false
     val query = SportsTextNormalizer.normalize(state.searchQuery).split(' ').filter(String::isNotBlank)
     if (query.isEmpty()) return true

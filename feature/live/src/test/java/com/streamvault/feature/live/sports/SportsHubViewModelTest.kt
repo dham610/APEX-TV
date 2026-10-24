@@ -131,6 +131,8 @@ class SportsHubViewModelTest {
         whenever(preferences.getSportsEventChannelPicks(any(), any())).thenReturn(emptyMap())
         whenever(preferences.getExcludedSports()).thenReturn(flowOf(emptySet()))
         whenever(preferences.getExcludedSportsLeagues()).thenReturn(flowOf(emptySet()))
+        whenever(preferences.getFollowedTeams()).thenReturn(flowOf(emptySet()))
+        runBlocking { whenever(preferences.hasFollowedTeamsSetting()).thenReturn(true) }
         whenever(sync.observeMetadata(7L)).thenReturn(flowOf(null))
         whenever(sources.getAllSources()).thenReturn(flowOf(emptyList()))
         whenever(sources.getAssignmentsForProvider(7L)).thenReturn(flowOf(emptyList()))
