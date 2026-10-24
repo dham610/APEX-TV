@@ -155,15 +155,15 @@ class PlayerInputPolicyTest {
     }
 
     @Test
-    fun `left and right map channel list and EPG according to layout direction`() {
+    fun `left is consumed and right opens EPG according to layout direction`() {
         assertThat(playerInputDecision(liveState(), PlayerInputKey.DpadLeft).action)
-            .isEqualTo(PlayerInputAction.OpenChannelList)
+            .isEqualTo(PlayerInputAction.Consume)
         assertThat(playerInputDecision(liveState(), PlayerInputKey.DpadRight).action)
             .isEqualTo(PlayerInputAction.OpenEpg)
         assertThat(playerInputDecision(liveState(isRtl = true), PlayerInputKey.DpadLeft).action)
             .isEqualTo(PlayerInputAction.OpenEpg)
         assertThat(playerInputDecision(liveState(isRtl = true), PlayerInputKey.DpadRight).action)
-            .isEqualTo(PlayerInputAction.OpenChannelList)
+            .isEqualTo(PlayerInputAction.Consume)
     }
 
     @Test

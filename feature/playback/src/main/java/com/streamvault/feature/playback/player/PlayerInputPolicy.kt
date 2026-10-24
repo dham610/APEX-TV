@@ -288,8 +288,9 @@ private fun directionalInputDecision(
         (isLeft.not() || !state.showCategoryListOverlay)
     if (liveWithoutOverlay) {
         val openChannelList = if (isLeft) !state.isRtl else state.isRtl
+        // APEX TV: the Guide is the channel browser, so Left no longer opens the in-player channel/category list.
         return PlayerInputDecision(
-            if (openChannelList) PlayerInputAction.OpenChannelList else PlayerInputAction.OpenEpg,
+            if (openChannelList) PlayerInputAction.Consume else PlayerInputAction.OpenEpg,
             notifyInteraction
         )
     }
