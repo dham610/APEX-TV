@@ -137,8 +137,10 @@ internal fun DestinationResumedEffect(
     LaunchedEffect(currentBackStackEntry) {
         val entry = currentBackStackEntry ?: return@LaunchedEffect
         entry.lifecycle.awaitResumed()
-        entry.destination.route
-            ?.let(AppRouteCodec::decode)
-            ?.let(onDestinationResumed)
+        val route = entry.destination.route
+        // The Guide's route pattern carries {placeholders}, which don't decode; treat it as the plain Guide.
+        val destination = route?.let(AppRouteCodec::decode)
+            ?: route?.takeIf { it.substringBefore('?') == AppRoutePatterns.EPG }?.let { AppDestination.Guide() }
+        destination?.let(onDestinationResumed)
     }
 }

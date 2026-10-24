@@ -7,8 +7,14 @@ internal object SportsTextNormalizer {
     private val combiningMarkPattern = Regex("\\p{Mn}+")
     private val nonLetterOrNumberPattern = Regex("[^\\p{L}\\p{N}]+")
     private val whitespacePattern = Regex("\\s+")
+    // Guides tag titles with superscript letters such as "ᴸᶦᵛᵉ" and "ᴺᵉʷ"; they are not part of a name.
+    private val superscriptTagPattern = Regex("[\u02B0-\u02FF\u1D2C-\u1DBF\u2070-\u209F]+")
+
+    /** Removes guide tags written as superscript letters ("Live", "New") from a display name. */
+    fun stripGuideTags(value: String): String = value.replace(superscriptTagPattern, " ").replace(whitespacePattern, " ").trim()
 
     fun normalize(value: String): String = Normalizer.normalize(value, Normalizer.Form.NFD)
+        .replace(superscriptTagPattern, " ")
         .replace(combiningMarkPattern, "")
         .lowercase(Locale.ROOT)
         .replace('&', ' ')
@@ -132,6 +138,8 @@ internal object SportsLeagueRegistry {
         Definition("EuroLeague", SportType.BASKETBALL, listOf("EuroLeague", "Euro League")),
         Definition("LNB Pro A", SportType.BASKETBALL, listOf("LNB Pro A")),
         Definition("NFL", SportType.AMERICAN_FOOTBALL, listOf("NFL")),
+        Definition("College Football", SportType.AMERICAN_FOOTBALL, listOf("College Football", "NCAA Football", "NCAAF")),
+        Definition("College Basketball", SportType.BASKETBALL, listOf("College Basketball", "NCAA Basketball", "NCAAB")),
         Definition("MLB", SportType.BASEBALL, listOf("MLB")),
         Definition("NHL", SportType.HOCKEY, listOf("NHL")),
         Definition("ATP Tour", SportType.TENNIS, listOf("ATP Tour", "ATP Masters")),

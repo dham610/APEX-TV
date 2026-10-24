@@ -88,7 +88,9 @@ internal object SportsEventAssembler {
             "${broadcast.channel.providerId}:${broadcast.channel.id}"
         }.sortedBy { it.channel.name.lowercase() }
         val competitors = flatMap { candidate ->
-            candidate.classification.competitors.map { displayName -> SportsCompetitor(displayName) }
+            candidate.classification.competitors.map { displayName ->
+                SportsCompetitor(SportsTextNormalizer.stripGuideTags(displayName))
+            }
         }.distinctBy(SportsCompetitor::canonicalName)
         val rawProgrammeRefs = map(SportsEventCandidate::program).distinctBy { program ->
             "${program.id}:${program.channelId}:${program.startTime}:${program.endTime}"

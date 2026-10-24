@@ -269,6 +269,15 @@ class SportsProgrammeClassifierTest {
         )
     }
 
+    @Test
+    fun collegeFootballIsAmericanFootballAndGuideSuperscriptTagsAreIgnored() {
+        val game = classify("College Football : USC at Nebraska \u1D38\u1DA6\u1D5B\u1D49")
+        assertThat(game.isCompetitiveEvent).isTrue()
+        assertThat(game.sport).isEqualTo(SportType.AMERICAN_FOOTBALL)
+        assertThat(game.competitors.map(SportsAliasRegistry::normalizeTeamName))
+            .containsExactly("usc trojans", "nebraska").inOrder()
+    }
+
     private fun classify(
         title: String,
         description: String = "",

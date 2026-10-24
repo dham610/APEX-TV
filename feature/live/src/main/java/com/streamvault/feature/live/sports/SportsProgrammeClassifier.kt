@@ -15,7 +15,9 @@ internal object SportsProgrammeClassifier {
     private val genericCategoryNames = setOf("sport", "sports", "live tv", "tv")
 
     private val sportsTerms = mapOf(
-        SportType.AMERICAN_FOOTBALL to listOf("american football", "gridiron", "nfl"),
+        SportType.AMERICAN_FOOTBALL to listOf(
+            "american football", "gridiron", "nfl", "college football", "ncaa football", "ncaaf", "cfb",
+        ),
         SportType.FOOTBALL to listOf(
             "football", "soccer", "futbol", "fútbol", "futebol", "fußball", "fussball", "fudbal",
             "رياضة كرة القدم", "كرة القدم", "premier league", "champions league", "la liga",
@@ -24,7 +26,9 @@ internal object SportsProgrammeClassifier {
             "uefa nations league", "carabao cup", "efl cup", "saudi pro league",
             "roshn saudi league", "liga mx", "scottish premiership", "spfl premiership",
         ),
-        SportType.BASKETBALL to listOf("basketball", "basket-ball", "nba", "wnba", "euroleague"),
+        SportType.BASKETBALL to listOf(
+            "basketball", "basket-ball", "nba", "wnba", "euroleague", "college basketball", "ncaab", "march madness",
+        ),
         SportType.BASEBALL to listOf("baseball", "mlb"),
         SportType.HOCKEY to listOf("ice hockey", "hockey", "nhl"),
         SportType.TENNIS to listOf("tennis", "tenis", "atp", "wta", "grand slam"),
