@@ -14,6 +14,8 @@ import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlay
 import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlayLabels
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategoryPickerDialog
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategorySidePanel
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
@@ -186,6 +188,22 @@ fun LiveEpgScreen(
     var topNavVisible by rememberSaveable { mutableStateOf(true) }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
     var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
+    val guideFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    var categoryPanelWasOpen by remember { mutableStateOf(false) }
+    val guideShift by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (showCategoryPanel) 320.dp else 0.dp,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 220),
+        label = "guideShift"
+    )
+    LaunchedEffect(showCategoryPanel) {
+        if (showCategoryPanel) {
+            categoryPanelWasOpen = true
+        } else if (categoryPanelWasOpen) {
+            categoryPanelWasOpen = false
+            // Put focus back on the guide row that was selected before the panel opened.
+            runCatching { guideFocusRequester.requestFocus() }
+        }
+    }
     var showGuideOptions by rememberSaveable { mutableStateOf(false) }
     var showSearchOverlay by rememberSaveable { mutableStateOf(false) }
     var showPinDialog by rememberSaveable { mutableStateOf(false) }
@@ -432,7 +450,11 @@ fun LiveEpgScreen(
                 }
         ) {
         LiveGuideContent(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRequester(guideFocusRequester)
+                .focusRestorer()
+                .graphicsLayer { translationX = guideShift.toPx() },
             isInitialLoading = uiState.isInitialLoading,
             contentMessage = contentMessage,
             channels = uiState.channels,
@@ -542,8 +564,12 @@ fun LiveEpgScreen(
         androidx.compose.animation.AnimatedVisibility(
             visible = showCategoryPanel,
             modifier = Modifier.align(Alignment.CenterStart),
-            enter = androidx.compose.animation.slideInHorizontally { -it },
-            exit = androidx.compose.animation.slideOutHorizontally { -it }
+            enter = androidx.compose.animation.slideInHorizontally(
+                animationSpec = androidx.compose.animation.core.tween(220)
+            ) { -it },
+            exit = androidx.compose.animation.slideOutHorizontally(
+                animationSpec = androidx.compose.animation.core.tween(220)
+            ) { -it }
         ) {
             LiveGuideCategorySidePanel(
                 categories = uiState.categories,
