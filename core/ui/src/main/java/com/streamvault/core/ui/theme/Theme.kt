@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun StreamVaultTheme(
-    themeId: String = AppPalette.CLASSIC_BLUE_ID,
+    themeId: String = AppPalette.APEX_GOLD_ID,
     content: @Composable () -> Unit
 ) {
     val palette = AppPalette.forTheme(themeId)

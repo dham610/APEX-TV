@@ -413,6 +413,7 @@ private fun AppLandingDestination.labelResId(): Int = when (this) {
 }
 
 private fun AppTheme.labelResId(): Int = when (this) {
+    AppTheme.APEX_GOLD -> R.string.settings_theme_apex_gold
     AppTheme.CLASSIC_BLUE -> R.string.settings_theme_classic_blue
     AppTheme.M3_PURPLE -> R.string.settings_theme_m3_purple
     AppTheme.LIGHT -> R.string.settings_theme_light

@@ -50,7 +50,7 @@ fun browsePrimaryButtonColors() = ButtonDefaults.colors(
 
 /** Theme-derived colors, also available to non-composable drawing helpers. */
 object BrowseColors {
-    private var source = AppPalette.classicBlue()
+    private var source = AppPalette.apexGold()
     private var resolved = source.forBrowsing()
     val current: AppPalette
         get() {

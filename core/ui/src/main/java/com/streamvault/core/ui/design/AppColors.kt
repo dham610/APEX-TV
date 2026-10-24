@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.Color
  * palette changes made by the single application theme root.
  */
 object AppColors {
-    private val activeState: MutableState<AppPalette> = mutableStateOf(AppPalette.classicBlue())
+    private val activeState: MutableState<AppPalette> = mutableStateOf(AppPalette.apexGold())
 
     var current: AppPalette
         get() = activeState.value

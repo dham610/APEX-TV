@@ -30,6 +30,7 @@ data class AppPalette(
     val isLight: Boolean
 ) {
     companion object {
+        const val APEX_GOLD_ID = "apex_gold"
         const val CLASSIC_BLUE_ID = "classic_blue"
         const val M3_PURPLE_ID = "m3_purple"
         const val LIGHT_ID = "light"
@@ -41,6 +42,7 @@ data class AppPalette(
         const val VINTAGE_ID = "vintage"
 
         fun forTheme(themeId: String?): AppPalette = when (themeId?.trim()?.lowercase()) {
+            CLASSIC_BLUE_ID -> classicBlue()
             M3_PURPLE_ID -> m3Purple()
             LIGHT_ID -> light()
             FOREST_ID -> forest()
@@ -49,8 +51,36 @@ data class AppPalette(
             ROSE_ID -> rose()
             AMOLED_BLACK_ID -> amoledBlack()
             VINTAGE_ID -> vintage()
-            else -> classicBlue()
+            else -> apexGold()
         }
+
+        /** APEX TV: near-black surfaces with warm gold accents, matching the app icon. */
+        fun apexGold(): AppPalette = AppPalette(
+            canvas = Color(0xFF050505),
+            canvasElevated = Color(0xFF0A0A0A),
+            surface = Color(0xFF111111),
+            surfaceElevated = Color(0xFF191816),
+            surfaceEmphasis = Color(0xFF26210F),
+            surfaceAccent = Color(0xFF332A12),
+            brand = Color(0xFFD9A93C),
+            brandMuted = Color(0x33D9A93C),
+            brandStrong = Color(0xFFF2CB63),
+            onPrimary = Color(0xFF1A1405),
+            focus = Color(0xFFFFD875),
+            textPrimary = Color(0xFFF7F2E6),
+            textSecondary = Color(0xFFCBC2AB),
+            textTertiary = Color(0xFF8E8671),
+            textDisabled = Color(0xFF5C5748),
+            live = Color(0xFFFF5C61),
+            success = Color(0xFF4FD39A),
+            warning = Color(0xFFFFC766),
+            info = Color(0xFF7FC8E8),
+            divider = Color(0x1AF7F2E6),
+            outline = Color(0x40D9A93C),
+            heroTop = Color(0xCC050505),
+            heroBottom = Color(0xF2050505),
+            isLight = false
+        )
 
         fun classicBlue(): AppPalette = AppPalette(
             canvas = Color(0xFF07111B),

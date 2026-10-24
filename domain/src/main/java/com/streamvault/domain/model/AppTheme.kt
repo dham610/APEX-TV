@@ -1,6 +1,7 @@
 package com.streamvault.domain.model
 
 enum class AppTheme(val storageValue: String) {
+    APEX_GOLD("apex_gold"),
     CLASSIC_BLUE("classic_blue"),
     M3_PURPLE("m3_purple"),
     LIGHT("light"),
@@ -12,7 +13,7 @@ enum class AppTheme(val storageValue: String) {
     VINTAGE("vintage");
 
     companion object {
-        val DEFAULT: AppTheme = CLASSIC_BLUE
+        val DEFAULT: AppTheme = APEX_GOLD
 
         fun fromStorage(value: String?): AppTheme {
             val normalized = value?.trim().orEmpty()
