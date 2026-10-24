@@ -63,6 +63,23 @@ internal object SportsProviderEventMatcher {
             ?.let { add(CandidateKey(canonicalTitle = it)) }
     }
 
+    /**
+     * APEX TV: ESPN names teams with their mascot ("Texas A&M Aggies") while guides and playlists often drop it
+     * ("Texas A&M"). Two competitor lists are the same when every name equals, or starts with, a name on the
+     * other side.
+     */
+    fun competitorSetsEquivalent(a: Set<String>, b: Set<String>): Boolean {
+        if (a == b) return true
+        if (a.isEmpty() || a.size != b.size) return false
+        val unused = b.toMutableList()
+        for (x in a) {
+            val index = unused.indexOfFirst { y -> x == y || x.startsWith("$y ") || y.startsWith("$x ") }
+            if (index < 0) return false
+            unused.removeAt(index)
+        }
+        return true
+    }
+
     fun match(providerEvent: ProviderEvent, localEvent: SportsEvent): SportsProviderEventMatch? {
         if (localEvent.eventType in nonCompetitiveTypes || localEvent.confidence < MIN_LOCAL_CONFIDENCE) return null
 
@@ -78,14 +95,16 @@ internal object SportsProviderEventMatcher {
         val localCompetitors = localEvent.competitors.map(SportsCompetitor::canonicalName)
             .filter(String::isNotBlank).toSet()
         val competitorsPresentOnBothSides = providerCompetitors.isNotEmpty() && localCompetitors.isNotEmpty()
-        if (competitorsPresentOnBothSides && providerCompetitors != localCompetitors) return null
+        val competitorsEquivalent = competitorsPresentOnBothSides &&
+            competitorSetsEquivalent(providerCompetitors, localCompetitors)
+        if (competitorsPresentOnBothSides && !competitorsEquivalent) return null
 
         val providerTitle = providerEvent.title?.let(SportsProgrammeClassifier::canonicalEventTitle).orEmpty()
         val localTitle = SportsProgrammeClassifier.canonicalEventTitle(localEvent.title)
         val exactTitle = providerTitle.isNotBlank() && providerTitle == localTitle &&
             !SportsProgrammeClassifier.isGenericEventTitle(providerTitle) &&
             !SportsProgrammeClassifier.isGenericEventTitle(localTitle)
-        val exactCompetitors = competitorsPresentOnBothSides && providerCompetitors == localCompetitors
+        val exactCompetitors = competitorsEquivalent
         if (!exactCompetitors && !exactTitle) return null
 
         val providerLeagueIdentity = leagueIdentity(providerEvent.league)

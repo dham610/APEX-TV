@@ -56,11 +56,33 @@ internal class SportsProviderEventResolver @Inject constructor(
             }
         }
 
+        // Index guide events by the first word of each team so provider names that add a mascot still find them.
+        val localEventsByTeamWord = HashMap<String, MutableList<SportsEvent>>()
+        epgEvents.forEach { localEvent ->
+            localEvent.competitors.map(SportsCompetitor::canonicalName)
+                .mapNotNull { it.substringBefore(' ').takeIf(String::isNotBlank) }
+                .distinct()
+                .forEach { word -> localEventsByTeamWord.getOrPut(word) { mutableListOf() }.add(localEvent) }
+        }
+
         // An absent guide (including a provisional API-only presentation) is not
         // evidence that an existing link has become invalid.
         val proposedMatches = if (epgEvents.isEmpty()) emptyList() else uniqueProviderEvents.mapNotNull { sourced ->
-            val candidates = SportsProviderEventMatcher.candidateKeys(sourced.value)
-                .flatMap { localEventsByCandidateKey[it].orEmpty() }
+            val providerTeams = sourced.value.competitors
+                .map { SportsAliasRegistry.normalizeTeamName(it.name) }
+                .filter(String::isNotBlank).toSet()
+            val candidates = (
+                SportsProviderEventMatcher.candidateKeys(sourced.value)
+                    .flatMap { localEventsByCandidateKey[it].orEmpty() } +
+                    providerTeams
+                        .flatMap { team -> localEventsByTeamWord[team.substringBefore(' ')].orEmpty() }
+                        .filter { local ->
+                            SportsProviderEventMatcher.competitorSetsEquivalent(
+                                providerTeams,
+                                local.competitors.map(SportsCompetitor::canonicalName).filter(String::isNotBlank).toSet(),
+                            )
+                        }
+                )
                 .distinctBy(SportsEvent::id)
             matchProviderEvent(sourced, candidates, epgById, now)
         }

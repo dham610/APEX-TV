@@ -19,7 +19,7 @@ class SportsEventChannelParserTest {
         val feed = SportsEventChannelParser.parse(
             "US (ESPN+ 053) | NCAA Football: Pitt vs. #1 Miami (SkyCast) (2026-10-24 12:02:05)"
         )!!
-        assertThat(feed.title).isEqualTo("NCAA Football: Pitt vs. #1 Miami")
+        assertThat(feed.title).isEqualTo("NCAA Football: Pitt vs. Miami")
 
         val usc = SportsEventChannelParser.parse("US (Peacock 016) |  USC vs. Wisconsin (2026-10-24 19:00:05)")!!
         assertThat(usc.title).isEqualTo("USC vs. Wisconsin")

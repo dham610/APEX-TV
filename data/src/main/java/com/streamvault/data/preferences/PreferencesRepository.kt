@@ -243,6 +243,14 @@ class PreferencesRepository @Inject constructor(
         }.toMap()
     }
 
+    /** APEX TV: the built-in ESPN sports data source is added once, so removing it later sticks. */
+    suspend fun hasSeededEspnSportsProvider(): Boolean =
+        preferencesDataStore.data.first()[booleanPreferencesKey("apex_espn_seeded")] == true
+
+    suspend fun markEspnSportsProviderSeeded() {
+        preferencesDataStore.edit { it[booleanPreferencesKey("apex_espn_seeded")] = true }
+    }
+
     suspend fun hasFollowedTeamsSetting(): Boolean =
         preferencesDataStore.data.first().contains(stringSetPreferencesKey("apex_followed_teams"))
 

@@ -204,30 +204,23 @@ fun LiveGuideGridRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (channelRailWidth < 150.dp && (isFavorite || hasUsableArchive)) {
+                // APEX TV: small icons instead of text chips, so channel names get the room.
+                // Star = favourite. Clock = the provider keeps past shows you can replay (catch-up).
+                if (isFavorite) {
                     Icon(
-                        imageVector = if (hasUsableArchive) Icons.Default.History else Icons.Default.Star,
-                        contentDescription = if (hasUsableArchive) labels.archiveBadge else labels.favoriteBadge,
+                        imageVector = Icons.Default.Star,
+                        contentDescription = labels.favoriteBadge,
                         tint = Primary,
                         modifier = Modifier.size(14.dp)
                     )
-                } else if (isFavorite || hasUsableArchive) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                color = Primary.copy(alpha = 0.16f),
-                                shape = androidx.compose.foundation.shape.CircleShape
-                            )
-                            .padding(horizontal = 5.dp, vertical = 1.dp)
-                    ) {
-                        Text(
-                            text = if (hasUsableArchive) labels.archiveBadge else labels.favoriteBadge,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                }
+                if (hasUsableArchive) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = labels.archiveBadge,
+                        tint = Primary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
             }
         }

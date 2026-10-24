@@ -51,6 +51,8 @@ internal fun SportsDiscoverySearch(
     myTeamsOnly: Boolean = false,
     onToggleMyTeams: () -> Unit = {},
     onOpenTeams: () -> Unit = {},
+    showUnverified: Boolean = false,
+    onToggleUnverified: () -> Unit = {},
     filters: @Composable () -> Unit,
 ) {
     var searchOpen by remember { mutableStateOf(false) }
@@ -86,6 +88,14 @@ internal fun SportsDiscoverySearch(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             ) {
                 Text(if (myTeamsOnly) "★ My teams: on" else "☆ My teams", fontSize = 11.sp, maxLines = 1)
+            }
+            TvButton(
+                onClick = onToggleUnverified,
+                modifier = Modifier.height(34.dp),
+                scale = ButtonDefaults.scale(focusedScale = 1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                Text(if (showUnverified) "All listings" else "Confirmed live", fontSize = 11.sp, maxLines = 1)
             }
             TvButton(
                 onClick = onOpenTeams,

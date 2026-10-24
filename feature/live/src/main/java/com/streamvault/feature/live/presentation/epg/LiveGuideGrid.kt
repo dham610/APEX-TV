@@ -48,6 +48,7 @@ fun LiveGuideGrid(
     transparentOverlay: Boolean = false,
     initialFocusedChannelId: Long? = null,
     selectedChannelId: Long? = null,
+    focusResetKey: Any? = null,
     onChannelClick: (Channel) -> Unit,
     onChannelLongClick: ((Channel, Program?) -> Unit)? = null,
     onProgramClick: (Channel, Program) -> Unit,
@@ -57,7 +58,7 @@ fun LiveGuideGrid(
     onRequestMoreChannels: () -> Unit = {}
 ) {
     val portrait = isPortraitLayout()
-    val channelRailWidth = if (portrait) 112.dp else 180.dp
+    val channelRailWidth = if (portrait) 112.dp else 260.dp
     val timelineGap = 4.dp
     val rowHeight = when (density) {
         GuideDensity.COMPACT -> 38.dp
@@ -75,7 +76,9 @@ fun LiveGuideGrid(
         liveGuideInitialFocusIndex(channels, resolvedInitialChannelId)
     }
 
-    LaunchedEffect(channels.size, resolvedInitialChannelId) {
+    // APEX TV: jump to the starting row once per category, not whenever more channels load or the list
+    // reorders (favouriting a channel moves it), which used to snap the guide back to the top.
+    LaunchedEffect(focusResetKey, channels.isNotEmpty()) {
         if (channels.isEmpty()) return@LaunchedEffect
         verticalListState.scrollToItem((initialFocusIndex - 2).coerceAtLeast(0))
         delay(140)

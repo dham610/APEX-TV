@@ -21,6 +21,7 @@ internal class SportsHubViewModel @Inject constructor(
     fun setTeamFollowed(canonicalName: String, displayName: String, followed: Boolean) =
         repository.setTeamFollowed(canonicalName, displayName, followed)
     fun setShowMyTeamsOnly(enabled: Boolean) = repository.setShowMyTeamsOnly(enabled)
+    fun setShowUnverified(enabled: Boolean) = repository.setShowUnverified(enabled)
     fun retry() = repository.retry()
     fun selectTimeRange(range: SportsTimeRange) = repository.selectTimeRange(range)
     fun selectSportFilter(filter: SportsSportFilter) = repository.selectSportFilter(filter)

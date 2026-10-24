@@ -14,9 +14,19 @@ internal fun sportsDescriptionForPresentation(description: String): String = des
     .replace("\r\n", "\n")
     .trim()
 
+private val espnCoveredSports = setOf(
+    SportType.AMERICAN_FOOTBALL, SportType.BASKETBALL, SportType.BASEBALL, SportType.HOCKEY,
+)
+
 internal fun SportsEvent.matchesDiscovery(state: SportsHubUiState): Boolean {
     if (sport.discoveryKey in state.excludedSports || leagueFilterKey in state.excludedLeagues) return false
     if (!matches(state.selectedSportFilter)) return false
+    // APEX TV: a guide listing is not proof a game is on. When ESPN supplies the real schedule, a guide-only
+    // game in a sport it covers is probably a replay or a stale listing, so hide it unless asked.
+    if (state.providerBacked && !state.showUnverified &&
+        sport in espnCoveredSports &&
+        provenance.sources.none { it is com.streamvault.domain.sports.provider.SportsSourceRef.Provider }
+    ) return false
     if (state.showMyTeamsOnly) {
         val followed = state.followedTeams.map { it.canonicalName }.toSet()
         val titleText = SportsTextNormalizer.normalize(title)

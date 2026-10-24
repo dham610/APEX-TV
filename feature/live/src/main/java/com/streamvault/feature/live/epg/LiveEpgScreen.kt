@@ -507,6 +507,7 @@ fun LiveEpgScreen(
             focusedChannel = focusedChannel,
             focusedProgram = focusedProgram,
             selectedChannelId = reorderChannelId ?: uiState.previewChannelId,
+            focusResetKey = Triple(uiState.selectedCategoryId, uiState.showFavoritesOnly, uiState.programSearchQuery),
             onPreviewClick = {
                 val previewed = uiState.channels.firstOrNull { it.id == uiState.previewChannelId }
                 if (previewed != null) {

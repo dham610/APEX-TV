@@ -7,6 +7,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.dp
 import com.streamvault.app.navigation.graph.registerLiveGraph
 import com.streamvault.app.ui.components.shell.AppNavigationChrome
@@ -55,7 +59,23 @@ internal fun AppNavHost(
     onTopLevelDestinationRequested: (AppDestination) -> Unit,
     onCloseApp: () -> Unit
 ) {
-    androidx.compose.foundation.layout.Box {
+    // APEX TV: Play/Pause or Stop on the remote always stops a channel playing in the background PiP,
+    // even on screens where the PiP window itself can't be focused.
+    val backgroundPlayback: com.streamvault.app.live.BackgroundPlaybackViewModel =
+        androidx.hilt.navigation.compose.hiltViewModel()
+    val backgroundSession by backgroundPlayback.session.collectAsStateWithLifecycle()
+    androidx.compose.foundation.layout.Box(
+        modifier = androidx.compose.ui.Modifier.onPreviewKeyEvent { event ->
+            val stopKey = event.key == androidx.compose.ui.input.key.Key.MediaPlayPause ||
+                event.key == androidx.compose.ui.input.key.Key.MediaStop
+            if (backgroundSession != null && stopKey) {
+                if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) backgroundPlayback.stop()
+                true
+            } else {
+                false
+            }
+        }
+    ) {
     NavHost(
         navController = navController,
         startDestination = SystemRoutePatterns.WELCOME

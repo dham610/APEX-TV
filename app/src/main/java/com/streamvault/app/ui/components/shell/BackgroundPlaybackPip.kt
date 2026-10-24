@@ -82,7 +82,7 @@ fun BackgroundPlaybackPip(modifier: Modifier = Modifier) {
                 maxLines = 1
             )
             Text(
-                text = if (pipVisible) "OK hides video, hold OK stops" else "Audio only. OK shows video, hold OK stops",
+                text = if (pipVisible) "OK hides video. Play/Pause stops" else "Audio only. OK shows video. Play/Pause stops",
                 style = MaterialTheme.typography.labelSmall,
                 color = OnSurfaceDim,
                 maxLines = 1

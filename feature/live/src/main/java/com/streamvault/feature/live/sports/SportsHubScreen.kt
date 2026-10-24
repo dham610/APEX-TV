@@ -128,6 +128,7 @@ fun SportsHubScreen(
             onLoadExtraDetails = viewModel::loadExtraDetails,
             onSetTeamFollowed = viewModel::setTeamFollowed,
             onSetMyTeamsOnly = viewModel::setShowMyTeamsOnly,
+            onSetShowUnverified = viewModel::setShowUnverified,
             onPlayBroadcast = { broadcast ->
                 onPlaybackRequested(
                     LiveChannelPlaybackRequest(
@@ -165,6 +166,7 @@ internal fun SportsHubContent(
     onPlayBroadcast: (SportsBroadcast) -> Unit,
     onSetTeamFollowed: (String, String, Boolean) -> Unit = { _, _, _ -> },
     onSetMyTeamsOnly: (Boolean) -> Unit = {},
+    onSetShowUnverified: (Boolean) -> Unit = {},
 ) {
     var teamsOpen by remember { mutableStateOf(false) }
     var detailsEvent by remember { mutableStateOf<SportsEvent?>(null) }
@@ -217,6 +219,8 @@ internal fun SportsHubContent(
                     myTeamsOnly = state.showMyTeamsOnly,
                     onToggleMyTeams = { onSetMyTeamsOnly(!state.showMyTeamsOnly) },
                     onOpenTeams = { teamsOpen = true },
+                    showUnverified = state.showUnverified,
+                    onToggleUnverified = { onSetShowUnverified(!state.showUnverified) },
                 ) {
                     SportsSportFilters(state.selectedSportFilter, onSelectSportFilter)
                 }

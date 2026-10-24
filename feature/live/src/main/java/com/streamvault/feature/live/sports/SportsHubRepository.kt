@@ -78,6 +78,9 @@ internal data class SportsHubUiState(
     val knownLeagues: Map<String, String> = emptyMap(),
     val followedTeams: List<FollowedTeam> = emptyList(),
     val showMyTeamsOnly: Boolean = false,
+    /** True once a sports data source (ESPN) has supplied games, so guide-only games can be told apart. */
+    val providerBacked: Boolean = false,
+    val showUnverified: Boolean = false,
 )
 
 /** APEX TV: a team the user follows. [canonicalName] matches [SportsCompetitor.canonicalName]. */
@@ -141,6 +144,19 @@ internal class SportsHubRepository @Inject constructor(
     private var progressiveLoad = true
 
     init {
+        scope.launch {
+            // First run: add ESPN's public scoreboard as the sports data source. It needs no key and tells
+            // the Sports tab which games are really live, scheduled or finished.
+            runCatching {
+                if (!preferencesRepository.hasSeededEspnSportsProvider()) {
+                    val existing = sportsProviderStore.configurations()
+                    if (existing.none { it.instanceId == com.streamvault.data.sports.espn.EspnPublicSportsProvider.INSTANCE_ID }) {
+                        sportsProviderStore.save(com.streamvault.data.sports.espn.EspnPublicSportsProvider.config())
+                    }
+                    preferencesRepository.markEspnSportsProviderSeeded()
+                }
+            }
+        }
         scope.launch {
             // First run: start with Darryn's teams. After that the saved list (even if empty) wins.
             if (!preferencesRepository.hasFollowedTeamsSetting()) {
@@ -399,6 +415,10 @@ internal class SportsHubRepository @Inject constructor(
 
     fun setTeamFollowed(canonicalName: String, displayName: String, followed: Boolean) {
         scope.launch { preferencesRepository.setTeamFollowed(canonicalName, displayName, followed) }
+    }
+
+    fun setShowUnverified(enabled: Boolean) {
+        _uiState.update { it.copy(showUnverified = enabled) }
     }
 
     fun setShowMyTeamsOnly(enabled: Boolean) {
@@ -664,6 +684,9 @@ internal class SportsHubRepository @Inject constructor(
         _uiState.value = currentState.copy(
             isLoading = false,
             events = presentedEvents,
+            providerBacked = presentedEvents.any { event ->
+                event.provenance.sources.any { it is com.streamvault.domain.sports.provider.SportsSourceRef.Provider }
+            },
             selectedTimeRange = range,
             selectedSportFilter = currentState.selectedSportFilter,
             selectedLeagueFilter = selectedLeague,

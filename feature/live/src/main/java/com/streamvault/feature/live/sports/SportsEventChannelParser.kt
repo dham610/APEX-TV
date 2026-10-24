@@ -45,6 +45,8 @@ internal object SportsEventChannelParser {
             if (stripped == title || stripped.isBlank()) break
             title = stripped
         }
+        // Rankings in front of a team name ('#1 Miami') are not part of the name.
+        title = title.replace(Regex("""#\d+\s*"""), "").trim()
         if (title.isBlank()) return null
         val hint = SportsTextNormalizer.normalize(title)
             .split(" vs | v | at ".toRegex())
