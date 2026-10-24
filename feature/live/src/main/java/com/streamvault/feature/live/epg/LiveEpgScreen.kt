@@ -13,6 +13,10 @@ import com.streamvault.feature.live.presentation.epg.currentLiveGuideNow
 import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlay
 import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlayLabels
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategoryPickerDialog
+import com.streamvault.feature.live.presentation.epg.LiveGuideCategorySidePanel
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategoryPickerLabels
 import com.streamvault.feature.live.presentation.epg.LiveCompactGuideProgramDialog
 import com.streamvault.feature.live.presentation.epg.LiveCompactGuideProgramLabels
@@ -181,6 +185,7 @@ fun LiveEpgScreen(
     var focusedProgram by remember { mutableStateOf<Program?>(null) }
     var topNavVisible by rememberSaveable { mutableStateOf(true) }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
+    var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
     var showGuideOptions by rememberSaveable { mutableStateOf(false) }
     var showSearchOverlay by rememberSaveable { mutableStateOf(false) }
     var showPinDialog by rememberSaveable { mutableStateOf(false) }
@@ -410,6 +415,22 @@ fun LiveEpgScreen(
     }
 
     scaffold(currentRoute, stringResource(R.string.nav_epg), stringResource(R.string.guide_shell_subtitle), topNavVisible) {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onKeyEvent { event ->
+                    // APEX TV: Left from the edge of the guide opens the category panel.
+                    if (!showCategoryPanel &&
+                        event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
+                        event.key == androidx.compose.ui.input.key.Key.DirectionLeft
+                    ) {
+                        showCategoryPanel = true
+                        true
+                    } else {
+                        false
+                    }
+                }
+        ) {
         LiveGuideContent(
             modifier = Modifier.fillMaxSize(),
             isInitialLoading = uiState.isInitialLoading,
@@ -518,6 +539,31 @@ fun LiveEpgScreen(
             },
             onRequestMoreChannels = viewModel::requestMoreChannels
         )
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showCategoryPanel,
+            modifier = Modifier.align(Alignment.CenterStart),
+            enter = androidx.compose.animation.slideInHorizontally { -it },
+            exit = androidx.compose.animation.slideOutHorizontally { -it }
+        ) {
+            LiveGuideCategorySidePanel(
+                categories = uiState.categories,
+                selectedCategoryId = uiState.selectedCategoryId,
+                title = stringResource(R.string.epg_filter_label),
+                parentalControlLabel = stringResource(R.string.settings_parental_control),
+                channelCount = { count -> if (count == 1) "1 channel" else "$count channels" },
+                isCategoryLocked = { category -> isGuideCategoryLocked(category, uiState.parentalControlLevel) },
+                onDismiss = { showCategoryPanel = false },
+                onCategorySelected = { category ->
+                    showCategoryPanel = false
+                    if (isGuideCategoryLocked(category, uiState.parentalControlLevel)) {
+                        requestLockedGuideAction(LockedGuideAction.SelectCategory(category))
+                    } else {
+                        viewModel.selectCategory(category.id)
+                    }
+                }
+            )
+        }
+        }
     }
 
     if (showCategoryPicker) {

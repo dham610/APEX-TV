@@ -226,7 +226,7 @@ fun LiveGuideCategoryPickerDialog(
     }
 }
 
-private fun liveGuideCategoryKey(category: Category, index: Int): String {
+internal fun liveGuideCategoryKey(category: Category, index: Int): String {
     return "category:${category.id}:${category.name.trim()}:$index"
 }
 
