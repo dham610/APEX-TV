@@ -580,6 +580,14 @@ class PlayerViewModel @Inject constructor(
             currentChannelFlow.collect { refreshCurrentPlaybackQualityPreferenceScope() }
         }
         viewModelScope.launch {
+            // APEX TV: remember what was on screen so the Guide can preview it when the user comes back.
+            currentChannelFlow.collect { channel ->
+                if (channel != null && currentContentType == ContentType.LIVE && !isCatchUpPlayback.value) {
+                    playerPreviewCoordinator.noteLastPlayedLive(channel.id)
+                }
+            }
+        }
+        viewModelScope.launch {
             _currentSeries.collect { refreshCurrentPlaybackQualityPreferenceScope() }
         }
         viewModelScope.launch {

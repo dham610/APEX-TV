@@ -531,6 +531,22 @@ class EpgViewModel @Inject constructor(
         return true
     }
 
+    /**
+     * APEX TV: coming back from full screen (including an auto-started channel), preview the channel
+     * that was just playing instead of showing an empty preview window.
+     */
+    fun previewLastPlayedChannel() {
+        val channelId = livePreviewHandoffManager.consumeLastPlayedLive() ?: return
+        if (_uiState.value.previewChannelId != null) return
+        viewModelScope.launch {
+            val channel = _uiState.value.channels.firstOrNull { it.id == channelId }
+                ?: channelRepository.getChannel(channelId)
+                ?: return@launch
+            // The handed-back stream may have arrived while we looked the channel up.
+            if (_uiState.value.previewChannelId == null) previewChannel(channel)
+        }
+    }
+
     fun parkOrClearPreview() {
         if (!parkPreviewInBackground()) clearPreview()
     }

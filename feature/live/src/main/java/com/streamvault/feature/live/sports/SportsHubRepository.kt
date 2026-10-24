@@ -4,6 +4,7 @@ import android.os.SystemClock
 import com.streamvault.data.preferences.PreferencesRepository
 import com.streamvault.domain.model.ActiveLiveSource
 import com.streamvault.domain.model.Channel
+import com.streamvault.domain.model.Program
 import com.streamvault.domain.model.ContentType
 import com.streamvault.domain.model.GuideSourcePolicy
 import com.streamvault.domain.repository.ChannelRepository
@@ -936,11 +937,20 @@ internal class SportsHubRepository @Inject constructor(
         }
 
         val programsStartedAt = SystemClock.elapsedRealtime()
-        val programsByChannelKey = epgRepository.getResolvedProgramsForChannels(
+        val resolvedProgramsByKey = epgRepository.getResolvedProgramsForChannels(
             providerId = providerId,
             channelIds = channels.map { it.id }.distinct(),
             startTime = window.startTime,
             endTime = window.endTime,
+        )
+        // APEX TV: most channels are not linked to an XMLTV source, but the provider still supplies
+        // programmes for them. The Guide reads those native programmes too; do the same here so sports
+        // on every channel are found, not only on the few that are linked.
+        val programsByChannelKey = resolvedProgramsByKey + nativeProgramsForUnresolvedChannels(
+            providerId = providerId,
+            channels = channels,
+            resolvedProgramsByKey = resolvedProgramsByKey,
+            window = window,
         )
         SportsDiagnostics.performance(
             stage = "resolved-programs",
@@ -1037,6 +1047,39 @@ internal class SportsHubRepository @Inject constructor(
                 endTime = tomorrow.plusDays(7).atStartOfDay(zone).toInstant().toEpochMilli(),
             )
         }
+    }
+
+    private suspend fun nativeProgramsForUnresolvedChannels(
+        providerId: Long,
+        channels: List<Channel>,
+        resolvedProgramsByKey: Map<String, List<Program>>,
+        window: SportsTimeWindow,
+    ): Map<String, List<Program>> {
+        fun guideKey(channel: Channel): String? = channel.streamId.takeIf { it > 0L }?.toString()
+            ?: channel.epgChannelId?.trim()?.takeIf(String::isNotEmpty)
+        fun providerKeys(channel: Channel): List<String> = listOfNotNull(
+            channel.epgChannelId?.trim()?.takeIf(String::isNotEmpty),
+            channel.streamId.takeIf { it > 0L }?.toString(),
+        ).distinct()
+
+        val unresolved = channels.filter { channel ->
+            val key = guideKey(channel)
+            key != null && resolvedProgramsByKey[key].isNullOrEmpty()
+        }
+        if (unresolved.isEmpty()) return emptyMap()
+        val nativeByProviderKey = HashMap<String, List<Program>>()
+        unresolved.flatMap(::providerKeys).distinct().chunked(NATIVE_PROGRAM_QUERY_CHUNK).forEach { chunk ->
+            runCatching {
+                epgRepository.getProgramsForChannelsSnapshot(providerId, chunk, window.startTime, window.endTime)
+            }.getOrNull()?.let(nativeByProviderKey::putAll)
+        }
+        return unresolved.mapNotNull { channel ->
+            val key = guideKey(channel) ?: return@mapNotNull null
+            val programs = providerKeys(channel)
+                .flatMap { nativeByProviderKey[it].orEmpty() }
+                .distinctBy { Triple(it.id, it.startTime, it.endTime) }
+            if (programs.isEmpty()) null else key to programs
+        }.toMap()
     }
 
     private fun programMatchesRange(
@@ -1153,6 +1196,7 @@ internal class SportsHubRepository @Inject constructor(
 
     private companion object {
         const val PROVIDER_LOAD_TIMEOUT_MS = 25_000L
+        const val NATIVE_PROGRAM_QUERY_CHUNK = 400
         const val ENRICHMENT_TIMEOUT_MS = 5_000L
         const val EVENT_INDEX_CACHE_TTL_MS = 5 * 60_000L
         const val MAX_EVENT_INDEX_ENTRIES = 8

@@ -42,6 +42,16 @@ class LivePreviewHandoffManager @Inject constructor() {
     private val _pipVisible = MutableStateFlow(true)
     val pipVisible: StateFlow<Boolean> = _pipVisible.asStateFlow()
 
+    /** APEX TV: the live channel most recently shown full screen, so the Guide can preview it on return. */
+    @Volatile
+    private var lastPlayedLiveChannelId: Long? = null
+
+    fun noteLastPlayedLive(channelId: Long) {
+        lastPlayedLiveChannelId = channelId
+    }
+
+    fun consumeLastPlayedLive(): Long? = lastPlayedLiveChannelId.also { lastPlayedLiveChannelId = null }
+
     fun setPipVisible(visible: Boolean) {
         _pipVisible.value = visible
     }

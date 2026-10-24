@@ -199,6 +199,9 @@ fun LiveEpgScreen(
     LaunchedEffect(viewModel) {
         viewModel.adoptBackgroundPreview()
     }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.previewLastPlayedChannel()
+    }
     var selectedProgram by remember { mutableStateOf<Pair<Channel, Program>?>(null) }
     var focusedChannel by remember { mutableStateOf<Channel?>(null) }
     var focusedProgram by remember { mutableStateOf<Program?>(null) }
