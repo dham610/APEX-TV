@@ -192,6 +192,7 @@ fun LiveEpgScreen(
     var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
     var channelOptions by remember { mutableStateOf<Pair<Channel, Program?>?>(null) }
     val guideFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     var categoryPanelWasOpen by remember { mutableStateOf(false) }
     val guideShift by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (showCategoryPanel) 272.dp else 0.dp,
@@ -432,12 +433,14 @@ fun LiveEpgScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .onKeyEvent { event ->
-                    // APEX TV: Left from the edge of the guide opens the category panel.
+                    // APEX TV: Left opens the category panel only when focus can't move any further left.
                     if (!showCategoryPanel &&
                         event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
                         event.key == androidx.compose.ui.input.key.Key.DirectionLeft
                     ) {
-                        showCategoryPanel = true
+                        if (!focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Left)) {
+                            showCategoryPanel = true
+                        }
                         true
                     } else {
                         false
@@ -525,7 +528,21 @@ fun LiveEpgScreen(
                 if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) {
                     requestLockedGuideAction(LockedGuideAction.PlayChannel(channel, returnRoute))
                 } else {
-                    channelOptions = channel to currentProgram
+                    // Wait for the OK key to be released so the menu doesn't take the key-up as a click.
+                    scope.launch {
+                        kotlinx.coroutines.delay(350)
+                        channelOptions = channel to currentProgram
+                    }
+                }
+            },
+            onProgramLongClick = { channel, program ->
+                if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) {
+                    requestLockedGuideAction(LockedGuideAction.OpenProgram(channel, program))
+                } else {
+                    scope.launch {
+                        kotlinx.coroutines.delay(350)
+                        selectedProgram = channel to program
+                    }
                 }
             },
             onProgramClick = { channel, program ->

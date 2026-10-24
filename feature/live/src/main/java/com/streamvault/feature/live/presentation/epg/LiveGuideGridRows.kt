@@ -92,6 +92,7 @@ fun LiveGuideGridRow(
     onChannelLongClick: ((Program?) -> Unit)? = null,
     onChannelFocused: (Program?) -> Unit,
     onProgramClick: (Program) -> Unit,
+    onProgramLongClick: ((Program) -> Unit)? = null,
     onProgramFocused: (Program) -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -287,6 +288,7 @@ fun LiveGuideGridRow(
                                 windowEnd = windowEnd,
                                 totalTimelineWidth = totalTimelineWidth,
                                 onClick = { onProgramClick(program) },
+                                onLongClick = onProgramLongClick?.let { cb -> { cb(program) } },
                                 onFocused = { onProgramFocused(program) }
                             )
                         }
@@ -306,6 +308,7 @@ fun LiveGuideProgramItem(
     windowEnd: Long,
     totalTimelineWidth: Dp,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     onFocused: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -373,6 +376,7 @@ fun LiveGuideProgramItem(
 
     TvClickableSurface(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = Modifier
             .padding(start = itemStart, top = outerVerticalPadding, bottom = outerVerticalPadding)
             .width(itemWidth)

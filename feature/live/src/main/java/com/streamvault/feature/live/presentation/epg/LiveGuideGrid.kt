@@ -51,6 +51,7 @@ fun LiveGuideGrid(
     onChannelClick: (Channel) -> Unit,
     onChannelLongClick: ((Channel, Program?) -> Unit)? = null,
     onProgramClick: (Channel, Program) -> Unit,
+    onProgramLongClick: ((Channel, Program) -> Unit)? = null,
     onChannelFocused: (Channel, Program?, Boolean) -> Unit,
     onProgramFocused: (Channel, Program, Boolean) -> Unit,
     onRequestMoreChannels: () -> Unit = {}
@@ -145,6 +146,7 @@ fun LiveGuideGrid(
                         onChannelLongClick = onChannelLongClick?.let { cb -> { prog -> cb(channel, prog) } },
                         onChannelFocused = { onChannelFocused(channel, it, isFirstRow) },
                         onProgramClick = { program -> onProgramClick(channel, program) },
+                        onProgramLongClick = onProgramLongClick?.let { cb -> { program -> cb(channel, program) } },
                         onProgramFocused = { program -> onProgramFocused(channel, program, isFirstRow) }
                     )
                 }

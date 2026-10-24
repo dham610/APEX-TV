@@ -79,6 +79,7 @@ fun LiveGuideContent(
     onChannelClick: (Channel) -> Unit,
     onChannelLongClick: ((Channel, Program?) -> Unit)? = null,
     onProgramClick: (Channel, Program) -> Unit,
+    onProgramLongClick: ((Channel, Program) -> Unit)? = null,
     onChannelFocused: (Channel, Program?, Boolean) -> Unit,
     onProgramFocused: (Channel, Program, Boolean) -> Unit,
     onRequestMoreChannels: () -> Unit = {}
@@ -163,6 +164,7 @@ fun LiveGuideContent(
                         onChannelClick = onChannelClick,
                         onChannelLongClick = onChannelLongClick,
                         onProgramClick = onProgramClick,
+                        onProgramLongClick = onProgramLongClick,
                         onChannelFocused = onChannelFocused,
                         onProgramFocused = onProgramFocused,
                         onRequestMoreChannels = onRequestMoreChannels
