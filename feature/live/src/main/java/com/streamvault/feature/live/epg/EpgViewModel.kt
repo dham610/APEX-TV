@@ -870,6 +870,52 @@ class EpgViewModel @Inject constructor(
         }
     }
 
+    fun toggleChannelFavorite(channel: Channel) {
+        viewModelScope.launch {
+            val isFavorite = channel.id in _uiState.value.favoriteChannelIds
+            if (isFavorite) {
+                favoriteRepository.removeFavorite(
+                    providerId = channel.providerId,
+                    contentId = channel.id,
+                    contentType = ContentType.LIVE,
+                    groupId = null
+                )
+            } else {
+                favoriteRepository.addFavorite(
+                    providerId = channel.providerId,
+                    contentId = channel.id,
+                    contentType = ContentType.LIVE,
+                    groupId = null
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    recordingMessage = if (isFavorite) "Removed ${channel.name} from Favorites" else "Added ${channel.name} to Favorites"
+                )
+            }
+        }
+    }
+
+    fun hideChannel(channel: Channel) {
+        viewModelScope.launch {
+            preferencesRepository.setChannelHidden(channel.providerId, channel.id, true)
+            _uiState.update { it.copy(recordingMessage = "Hid ${channel.name}") }
+        }
+    }
+
+    fun addChannelToGroup(channel: Channel, category: Category) {
+        if (!category.isVirtual || category.id in setOf(VirtualCategoryIds.FAVORITES, VirtualCategoryIds.RECENT)) return
+        viewModelScope.launch {
+            favoriteRepository.addFavorite(
+                providerId = channel.providerId,
+                contentId = channel.id,
+                contentType = ContentType.LIVE,
+                groupId = -category.id
+            )
+            _uiState.update { it.copy(recordingMessage = "Added ${channel.name} to ${category.name}") }
+        }
+    }
+
     fun dismissRecordingConflict() {
         _uiState.update { it.copy(pendingRecordingConflict = null) }
     }

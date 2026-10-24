@@ -73,6 +73,7 @@ fun List<Program>.liveCurrentProgramAt(now: Long): Program? =
 fun LiveGuideGridRow(
     channel: Channel,
     isFavorite: Boolean,
+    isSelected: Boolean = false,
     programs: List<Program>,
     windowStart: Long,
     windowEnd: Long,
@@ -143,11 +144,15 @@ fun LiveGuideGridRow(
                     isFocused = it.isFocused
                 },
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = if (transparentOverlay) SurfaceElevated.copy(alpha = 0.62f) else SurfaceElevated,
+                containerColor = if (isSelected) Primary.copy(alpha = 0.20f) else if (transparentOverlay) SurfaceElevated.copy(alpha = 0.62f) else SurfaceElevated,
                 focusedContainerColor = if (transparentOverlay) SurfaceHighlight.copy(alpha = 0.88f) else SurfaceHighlight
             ),
             shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
             border = ClickableSurfaceDefaults.border(
+                border = if (isSelected) Border(
+                    border = BorderStroke(2.dp, Primary),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                ) else Border.None,
                 focusedBorder = Border(
                     border = BorderStroke(2.dp, FocusBorder),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
@@ -176,7 +181,7 @@ fun LiveGuideGridRow(
                     Text(
                         text = if (channel.number > 0) "${channel.number}. ${channel.name}" else channel.name,
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (isFocused) TextPrimary else OnSurface,
+                        color = if (isSelected) Primary else if (isFocused) TextPrimary else OnSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = if (isFocused) {

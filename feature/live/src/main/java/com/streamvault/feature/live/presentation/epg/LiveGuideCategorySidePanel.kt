@@ -66,7 +66,7 @@ fun LiveGuideCategorySidePanel(
 
     Surface(
         modifier = modifier
-            .width(320.dp)
+            .width(272.dp)
             .fillMaxHeight()
             .focusGroup()
             .onPreviewKeyEvent { event ->
@@ -85,8 +85,8 @@ fun LiveGuideCategorySidePanel(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
                 text = title,
@@ -95,7 +95,7 @@ fun LiveGuideCategorySidePanel(
             )
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 itemsIndexed(
                     items = categories,
@@ -128,13 +128,13 @@ fun LiveGuideCategorySidePanel(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
                                     text = category.name,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleSmall,
                                     color = if (isSelected) Primary else OnSurface,
                                     maxLines = 1
                                 )

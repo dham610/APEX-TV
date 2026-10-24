@@ -47,6 +47,7 @@ fun LiveGuideGrid(
     labels: LiveGuideGridLabels,
     transparentOverlay: Boolean = false,
     initialFocusedChannelId: Long? = null,
+    selectedChannelId: Long? = null,
     onChannelClick: (Channel) -> Unit,
     onChannelLongClick: ((Channel, Program?) -> Unit)? = null,
     onProgramClick: (Channel, Program) -> Unit,
@@ -125,6 +126,7 @@ fun LiveGuideGrid(
                     LiveGuideGridRow(
                         channel = channel,
                         isFavorite = channel.id in favoriteChannelIds,
+                        isSelected = channel.id == selectedChannelId,
                         programs = programs,
                         windowStart = guideWindowStart,
                         windowEnd = guideWindowEnd,

@@ -14,6 +14,8 @@ import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlay
 import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlayLabels
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategoryPickerDialog
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategorySidePanel
+import com.streamvault.feature.live.presentation.epg.LiveGuideChannelOption
+import com.streamvault.feature.live.presentation.epg.LiveGuideChannelOptionsDialog
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.key.onKeyEvent
@@ -188,10 +190,11 @@ fun LiveEpgScreen(
     var topNavVisible by rememberSaveable { mutableStateOf(true) }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
     var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
+    var channelOptions by remember { mutableStateOf<Pair<Channel, Program?>?>(null) }
     val guideFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     var categoryPanelWasOpen by remember { mutableStateOf(false) }
     val guideShift by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (showCategoryPanel) 320.dp else 0.dp,
+        targetValue = if (showCategoryPanel) 272.dp else 0.dp,
         animationSpec = androidx.compose.animation.core.tween(durationMillis = 220),
         label = "guideShift"
     )
@@ -358,14 +361,6 @@ fun LiveEpgScreen(
         )
     }
 
-    // APEX TV: preview whichever channel is focused, after a short pause so scrolling stays smooth.
-    LaunchedEffect(focusedChannel?.id) {
-        val channel = focusedChannel ?: return@LaunchedEffect
-        if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) return@LaunchedEffect
-        kotlinx.coroutines.delay(600)
-        viewModel.previewChannel(channel)
-    }
-
     LaunchedEffect(uiState.channels, uiState.programsByChannel) {
         val resolvedFocus = resolveLiveGuideFocus(
             channels = uiState.channels,
@@ -472,6 +467,20 @@ fun LiveEpgScreen(
             isPreviewLoading = uiState.isPreviewLoading,
             focusedChannel = focusedChannel,
             focusedProgram = focusedProgram,
+            selectedChannelId = uiState.previewChannelId,
+            onPreviewClick = {
+                val previewed = uiState.channels.firstOrNull { it.id == uiState.previewChannelId }
+                if (previewed != null) {
+                    viewModel.handoffOrClearForFullscreen(previewed)
+                    onPlayChannel(
+                        previewed,
+                        playerCategoryId,
+                        playerIsVirtualCategory,
+                        uiState.combinedProfileId,
+                        returnRoute
+                    )
+                }
+            },
             labels = LiveGuideContentLabels(
                 loading = stringResource(R.string.epg_loading),
                 preview = LiveGuidePreviewLabels(
@@ -498,8 +507,8 @@ fun LiveEpgScreen(
             onChannelClick = { channel ->
                 if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) {
                     requestLockedGuideAction(LockedGuideAction.PlayChannel(channel, returnRoute))
-                } else {
-                    // APEX TV: focus starts the preview; click always opens full screen.
+                } else if (uiState.previewChannelId == channel.id) {
+                    // APEX TV: first OK previews the channel, OK on the previewed channel opens full screen.
                     viewModel.handoffOrClearForFullscreen(channel)
                     onPlayChannel(
                         channel,
@@ -508,26 +517,15 @@ fun LiveEpgScreen(
                         uiState.combinedProfileId,
                         returnRoute
                     )
+                } else {
+                    viewModel.previewChannel(channel)
                 }
             },
             onChannelLongClick = { channel, currentProgram ->
-                topNavVisible = false
                 if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) {
                     requestLockedGuideAction(LockedGuideAction.PlayChannel(channel, returnRoute))
                 } else {
-                    val program = currentProgram ?: run {
-                        val now = System.currentTimeMillis()
-                        Program(
-                            channelId = channel.id.toString(),
-                            title = channel.name,
-                            startTime = now,
-                            endTime = now + 60L * 60L * 1000L
-                        )
-                    }
-                    scope.launch {
-                        kotlinx.coroutines.delay(350)
-                        selectedProgram = channel to program
-                    }
+                    channelOptions = channel to currentProgram
                 }
             },
             onProgramClick = { channel, program ->
@@ -535,16 +533,20 @@ fun LiveEpgScreen(
                 if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) {
                     requestLockedGuideAction(LockedGuideAction.OpenProgram(channel, program))
                 } else if (System.currentTimeMillis() in program.startTime until program.endTime) {
-                    // APEX TV: clicking the current programme opens the channel full screen.
+                    // APEX TV: same as the channel button: preview first, then full screen.
                     topNavVisible = true
-                    viewModel.handoffOrClearForFullscreen(channel)
-                    onPlayChannel(
-                        channel,
-                        playerCategoryId,
-                        playerIsVirtualCategory,
-                        uiState.combinedProfileId,
-                        returnRoute
-                    )
+                    if (uiState.previewChannelId == channel.id) {
+                        viewModel.handoffOrClearForFullscreen(channel)
+                        onPlayChannel(
+                            channel,
+                            playerCategoryId,
+                            playerIsVirtualCategory,
+                            uiState.combinedProfileId,
+                            returnRoute
+                        )
+                    } else {
+                        viewModel.previewChannel(channel)
+                    }
                 } else {
                     selectedProgram = channel to program
                 }
@@ -590,6 +592,59 @@ fun LiveEpgScreen(
             )
         }
         }
+    }
+
+    channelOptions?.let { (channel, program) ->
+        val isFavorite = channel.id in uiState.favoriteChannelIds
+        val customGroups = remember(uiState.categories) {
+            uiState.categories.filter {
+                it.isVirtual && it.id != ChannelRepository.ALL_CHANNELS_ID &&
+                    it.id != VirtualCategoryIds.FAVORITES && it.id != VirtualCategoryIds.RECENT
+            }
+        }
+        LiveGuideChannelOptionsDialog(
+            channelName = channel.name,
+            options = buildList {
+                add(LiveGuideChannelOption("Open full screen") {
+                    channelOptions = null
+                    viewModel.handoffOrClearForFullscreen(channel)
+                    onPlayChannel(
+                        channel,
+                        playerCategoryId,
+                        playerIsVirtualCategory,
+                        uiState.combinedProfileId,
+                        returnRoute
+                    )
+                })
+                add(LiveGuideChannelOption(if (isFavorite) "Remove from favorites" else "Add to favorites") {
+                    channelOptions = null
+                    viewModel.toggleChannelFavorite(channel)
+                })
+                if (program != null) {
+                    add(LiveGuideChannelOption("Record current program") {
+                        channelOptions = null
+                        notificationPermissionGate.runRecordingAction {
+                            viewModel.scheduleRecording(channel, program)
+                        }
+                    })
+                    add(LiveGuideChannelOption("Program details") {
+                        channelOptions = null
+                        selectedProgram = channel to program
+                    })
+                }
+                add(LiveGuideChannelOption("Hide channel") {
+                    channelOptions = null
+                    viewModel.hideChannel(channel)
+                })
+            },
+            groups = customGroups,
+            addToCategoryLabel = "Add to category",
+            onGroupSelected = { group ->
+                channelOptions = null
+                viewModel.addChannelToGroup(channel, group)
+            },
+            onDismiss = { channelOptions = null }
+        )
     }
 
     if (showCategoryPicker) {

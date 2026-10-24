@@ -68,6 +68,8 @@ fun LiveGuideContent(
     isPreviewLoading: Boolean,
     focusedChannel: Channel?,
     focusedProgram: Program?,
+    selectedChannelId: Long? = null,
+    onPreviewClick: () -> Unit = {},
     labels: LiveGuideContentLabels,
     onOpenCategoryPicker: () -> Unit,
     onJumpToNow: () -> Unit,
@@ -117,6 +119,7 @@ fun LiveGuideContent(
                         focusedChannel = focusedChannel,
                         focusedProgram = focusedProgram,
                         labels = labels.preview,
+                        onClick = onPreviewClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 4.dp)
@@ -156,6 +159,7 @@ fun LiveGuideContent(
                         guideWindowEnd = guideWindowEnd,
                         density = density,
                         labels = labels.grid,
+                        selectedChannelId = selectedChannelId,
                         onChannelClick = onChannelClick,
                         onChannelLongClick = onChannelLongClick,
                         onProgramClick = onProgramClick,

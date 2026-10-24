@@ -3,7 +3,12 @@ package com.streamvault.feature.live.presentation.epg
 import com.streamvault.core.ui.layout.isPortraitLayout
 
 import com.streamvault.core.ui.design.BrowseShapes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.tv.material3.Border
+import androidx.tv.material3.ClickableSurfaceDefaults
+import com.streamvault.core.ui.design.browse.FocusBorder
+import com.streamvault.core.ui.interaction.TvClickableSurface
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,7 +69,8 @@ fun LiveGuidePreviewPane(
     focusedChannel: Channel?,
     focusedProgram: Program?,
     labels: LiveGuidePreviewLabels,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     val renderSurfaceType by (previewPlayerEngine?.renderSurfaceType)?.collectAsStateWithLifecycle(
         initialValue = PlayerRenderSurfaceType.SURFACE_VIEW
@@ -73,10 +79,21 @@ fun LiveGuidePreviewPane(
     val appTimeFormat = LocalLiveTimeFormat.current
     val timeFormat = remember(appTimeFormat) { appTimeFormat.createLiveTimeFormat() }
 
-    Surface(
+    TvClickableSurface(
+        onClick = onClick,
         modifier = modifier.height(150.dp),
-        colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
-        shape = BrowseShapes.Panel
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = SurfaceElevated,
+            focusedContainerColor = SurfaceElevated
+        ),
+        shape = ClickableSurfaceDefaults.shape(BrowseShapes.Panel),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, FocusBorder),
+                shape = BrowseShapes.Panel
+            )
+        )
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(10.dp),
