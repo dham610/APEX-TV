@@ -55,6 +55,8 @@ fun LiveGuideCategorySidePanel(
     isCategoryLocked: (Category) -> Boolean,
     onDismiss: () -> Unit,
     onCategorySelected: (Category) -> Unit,
+    newCategoryLabel: String = "+ New category",
+    onCreateCategory: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val selectedRequester = remember { FocusRequester() }
@@ -97,6 +99,36 @@ fun LiveGuideCategorySidePanel(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
+                if (onCreateCategory != null) {
+                    item(key = "apex_new_category") {
+                        TvClickableSurface(
+                            onClick = onCreateCategory,
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = SurfaceHighlight,
+                                focusedContainerColor = SurfaceHighlight,
+                                contentColor = Primary,
+                                focusedContentColor = Primary
+                            ),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                            shape = ClickableSurfaceDefaults.shape(BrowseShapes.Control),
+                            border = ClickableSurfaceDefaults.border(
+                                focusedBorder = Border(
+                                    border = BorderStroke(2.dp, FocusBorder),
+                                    shape = BrowseShapes.Control
+                                )
+                            )
+                        ) {
+                            Text(
+                                text = newCategoryLabel,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Primary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
                 itemsIndexed(
                     items = categories,
                     key = { index, category -> liveGuideCategoryKey(category, index) }

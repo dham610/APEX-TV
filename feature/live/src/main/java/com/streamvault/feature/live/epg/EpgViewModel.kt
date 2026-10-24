@@ -896,6 +896,29 @@ class EpgViewModel @Inject constructor(
         }
     }
 
+    fun createCustomGroup(name: String) {
+        val trimmed = name.trim()
+        val message = when {
+            trimmed.isBlank() -> "Enter a category name."
+            trimmed.equals("Favorites", ignoreCase = true) -> "Favorites is a reserved name."
+            _uiState.value.categories.any { it.name.equals(trimmed, ignoreCase = true) } -> "$trimmed already exists."
+            else -> null
+        }
+        if (message != null) {
+            _uiState.update { it.copy(recordingMessage = message) }
+            return
+        }
+        viewModelScope.launch {
+            val providerId = baseGuideSnapshot.value?.providerId?.takeIf { it > 0L }
+            if (providerId == null) {
+                _uiState.update { it.copy(recordingMessage = "Select a single provider to create categories.") }
+                return@launch
+            }
+            favoriteRepository.createGroup(providerId, trimmed, contentType = ContentType.LIVE)
+            _uiState.update { it.copy(recordingMessage = "Created category $trimmed") }
+        }
+    }
+
     fun hideChannel(channel: Channel) {
         viewModelScope.launch {
             preferencesRepository.setChannelHidden(channel.providerId, channel.id, true)

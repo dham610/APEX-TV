@@ -190,6 +190,7 @@ fun LiveEpgScreen(
     var topNavVisible by rememberSaveable { mutableStateOf(true) }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
     var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
+    var showNewCategoryDialog by remember { mutableStateOf(false) }
     var channelOptions by remember { mutableStateOf<Pair<Channel, Program?>?>(null) }
     val guideFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
@@ -598,6 +599,7 @@ fun LiveEpgScreen(
                 channelCount = { count -> if (count == 1) "1 channel" else "$count channels" },
                 isCategoryLocked = { category -> isGuideCategoryLocked(category, uiState.parentalControlLevel) },
                 onDismiss = { showCategoryPanel = false },
+                onCreateCategory = { showNewCategoryDialog = true },
                 onCategorySelected = { category ->
                     showCategoryPanel = false
                     if (isGuideCategoryLocked(category, uiState.parentalControlLevel)) {
@@ -662,6 +664,42 @@ fun LiveEpgScreen(
             },
             onDismiss = { channelOptions = null }
         )
+    }
+
+    if (showNewCategoryDialog) {
+        com.streamvault.feature.live.home.LiveRenameGroupDialog(
+            initialName = "",
+            errorMessage = null,
+            labels = com.streamvault.feature.live.home.LiveRenameGroupDialogLabels(
+                title = "New category",
+                hint = "Name your category, then add channels to it from the channel menu.",
+                nameLabel = "Category name",
+                cancel = stringResource(R.string.settings_cancel),
+                confirm = "Create"
+            ),
+            onDismissRequest = { showNewCategoryDialog = false },
+            onConfirm = { name ->
+                showNewCategoryDialog = false
+                viewModel.createCustomGroup(name)
+            }
+        )
+    }
+
+    // APEX TV: Back from the guide returns to the full-screen channel that is playing.
+    androidx.activity.compose.BackHandler(
+        enabled = uiState.previewChannelId != null && !showCategoryPanel
+    ) {
+        val playing = uiState.channels.firstOrNull { it.id == uiState.previewChannelId }
+        if (playing != null) {
+            viewModel.handoffOrClearForFullscreen(playing)
+            onPlayChannel(
+                playing,
+                playerCategoryId,
+                playerIsVirtualCategory,
+                uiState.combinedProfileId,
+                returnRoute
+            )
+        }
     }
 
     if (showCategoryPicker) {
