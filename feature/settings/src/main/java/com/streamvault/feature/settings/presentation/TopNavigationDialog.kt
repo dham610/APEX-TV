@@ -44,7 +44,7 @@ fun TopNavigationDialog(
         mutableStateOf(AppTopLevelDestination.normalizeForStorage(currentDestinations))
     }
     val displayDestinations = remember(draftDestinations) {
-        val hidden = AppTopLevelDestination.defaultOrder.filterNot { it in draftDestinations }
+        val hidden = AppTopLevelDestination.allDestinations.filterNot { it in draftDestinations }
         draftDestinations + hidden
     }
 

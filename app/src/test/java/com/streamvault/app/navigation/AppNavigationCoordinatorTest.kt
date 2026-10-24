@@ -192,7 +192,7 @@ class AppNavigationCoordinatorTest {
         whenever(preferencesRepository.appLandingDestination)
             .thenReturn(flowOf(startupLanding))
         whenever(preferencesRepository.appTopLevelDestinations)
-            .thenReturn(flowOf(AppTopLevelDestination.defaultOrder))
+            .thenReturn(flowOf(AppTopLevelDestination.allDestinations))
         whenever(preferencesRepository.showFavoritesCategory).thenReturn(flowOf(true))
         whenever(preferencesRepository.getLastSplitCatalogType(7L)).thenReturn(flowOf(ContentType.MOVIE))
         val providerRepository = mock<ProviderRepository>()

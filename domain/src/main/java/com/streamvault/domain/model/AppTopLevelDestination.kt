@@ -17,7 +17,18 @@ enum class AppTopLevelDestination(
     SETTINGS("settings", AppLandingDestination.SETTINGS, isRequired = true);
 
     companion object {
+        // APEX TV: tabs shown by default, in order. Anything not listed starts hidden
+        // but can be turned on in Settings (see allDestinations).
         val defaultOrder: List<AppTopLevelDestination> = listOf(
+            HOME,
+            GUIDE,
+            SPORTS,
+            SEARCH,
+            EXTENSIONS,
+            SETTINGS
+        )
+
+        val allDestinations: List<AppTopLevelDestination> = listOf(
             HOME,
             LIVE_TV,
             SPORTS,

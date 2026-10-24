@@ -14,7 +14,7 @@ class AppShellNavigationTest {
     @Test
     fun `destination construction is independent of Activity and repository state`() {
         val result = buildDestinationItems(
-            configured = AppTopLevelDestination.defaultOrder,
+            configured = AppTopLevelDestination.allDestinations,
             layout = CatalogLayout.SPLIT
         )
 
