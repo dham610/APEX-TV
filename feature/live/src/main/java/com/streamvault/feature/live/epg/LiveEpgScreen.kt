@@ -335,6 +335,14 @@ fun LiveEpgScreen(
         )
     }
 
+    // APEX TV: preview whichever channel is focused, after a short pause so scrolling stays smooth.
+    LaunchedEffect(focusedChannel?.id) {
+        val channel = focusedChannel ?: return@LaunchedEffect
+        if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) return@LaunchedEffect
+        kotlinx.coroutines.delay(600)
+        viewModel.previewChannel(channel)
+    }
+
     LaunchedEffect(uiState.channels, uiState.programsByChannel) {
         val resolvedFocus = resolveLiveGuideFocus(
             channels = uiState.channels,
@@ -447,7 +455,8 @@ fun LiveEpgScreen(
             onChannelClick = { channel ->
                 if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) {
                     requestLockedGuideAction(LockedGuideAction.PlayChannel(channel, returnRoute))
-                } else if (uiState.previewChannelId == channel.id) {
+                } else {
+                    // APEX TV: focus starts the preview; click always opens full screen.
                     viewModel.handoffOrClearForFullscreen(channel)
                     onPlayChannel(
                         channel,
@@ -456,8 +465,6 @@ fun LiveEpgScreen(
                         uiState.combinedProfileId,
                         returnRoute
                     )
-                } else {
-                    viewModel.previewChannel(channel)
                 }
             },
             onChannelLongClick = { channel, currentProgram ->
@@ -484,6 +491,17 @@ fun LiveEpgScreen(
                 topNavVisible = false
                 if (isGuideChannelLocked(channel, categoriesById, uiState.parentalControlLevel)) {
                     requestLockedGuideAction(LockedGuideAction.OpenProgram(channel, program))
+                } else if (System.currentTimeMillis() in program.startTime until program.endTime) {
+                    // APEX TV: clicking the current programme opens the channel full screen.
+                    topNavVisible = true
+                    viewModel.handoffOrClearForFullscreen(channel)
+                    onPlayChannel(
+                        channel,
+                        playerCategoryId,
+                        playerIsVirtualCategory,
+                        uiState.combinedProfileId,
+                        returnRoute
+                    )
                 } else {
                     selectedProgram = channel to program
                 }
