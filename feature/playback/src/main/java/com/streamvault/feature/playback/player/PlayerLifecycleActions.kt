@@ -294,6 +294,11 @@ fun PlayerViewModel.handOffPlaybackToMultiView(): Job? {
     return progressFlush
 }
 
+/** APEX TV: a full-screen player is starting, so any background channel audio must stop. */
+fun PlayerViewModel.stopBackgroundPreview() {
+    playerPreviewCoordinator.stopBackgroundPreview()
+}
+
 internal fun PlayerViewModel.cleanupAfterCleared(mainPlayerEngine: PlayerEngine) {
     onPlayerScreenDisposed()
     channelInfoHideJob?.cancel()
@@ -326,6 +331,7 @@ internal fun PlayerViewModel.cleanupAfterCleared(mainPlayerEngine: PlayerEngine)
         && reverseHandoffSource != null
         && activeEngine.playbackState.value != PlaybackState.ERROR
 
+    android.util.Log.i("ApexHandoff", "player cleared t=${android.os.SystemClock.elapsedRealtime()} reverseHandoff=$canReverseHandoff")
     if (canReverseHandoff) {
         playerPreviewCoordinator.beginReverseHandoff(
             channel = channel!!,

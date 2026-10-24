@@ -61,6 +61,7 @@ data class SettingsPreferenceSnapshot(
     val appTheme: AppTheme,
     val preferredAudioLanguage: String,
     val playerMediaSessionEnabled: Boolean,
+    val pipOnLeaveEnabled: Boolean,
     val playerBackButtonVisibility: PlayerBackButtonVisibility,
     val playerConfirmClosePlayback: Boolean,
     val playerFastRetryOnTransientFailures: Boolean,

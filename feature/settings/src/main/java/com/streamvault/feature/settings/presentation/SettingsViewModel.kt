@@ -932,6 +932,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setPipOnLeaveEnabled(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setPipOnLeaveEnabled(enabled) }
+    }
+
     fun setPlayerMediaSessionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setPlayerMediaSessionEnabled(enabled)

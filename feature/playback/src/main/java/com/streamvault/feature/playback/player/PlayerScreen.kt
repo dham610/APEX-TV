@@ -138,6 +138,11 @@ fun PlayerScreen(
     splitScreenPlanner: @Composable (Channel, () -> Unit, () -> Unit) -> Unit = { _, _, _ -> },
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
+    LaunchedEffect(Unit) { viewModel.stopBackgroundPreview() }
+    val leavePlayer: () -> Unit = {
+        android.util.Log.i("ApexHandoff", "back pressed t=${android.os.SystemClock.elapsedRealtime()}")
+        onBack()
+    }
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val isTelevisionDevice = rememberIsTelevisionDevice()
     val sideOverlayWidth = if (screenWidth < 700.dp) {
@@ -267,7 +272,7 @@ fun PlayerScreen(
     LaunchedEffect(sleepTimerExitEvent) {
         if (sleepTimerExitEvent > 0) {
             viewModel.consumeSleepTimerExitEvent()
-            onBack()
+            leavePlayer()
         }
     }
 
@@ -555,7 +560,7 @@ fun PlayerScreen(
                     if (playerPreferences.confirmClosePlayback) {
                         openClosePlaybackConfirmation()
                     } else {
-                        onBack()
+                        leavePlayer()
                     }
                 }
             }
@@ -778,7 +783,7 @@ fun PlayerScreen(
 
         if (backButtonPlacement == PlayerBackButtonPlacement.STANDALONE) {
             PlayerBackButton(
-                onClick = onBack,
+                onClick = leavePlayer,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(18.dp)
@@ -870,7 +875,7 @@ fun PlayerScreen(
                 hasAlternateStream = false,
                 hasLastChannel = false,
                 onAction = handlePlayerNoticeAction,
-                onBack = onBack
+                onBack = leavePlayer
             )
             PlaybackResolutionUiState.Idle -> Unit
         }
@@ -883,7 +888,7 @@ fun PlayerScreen(
                 hasAlternateStream = viewModel.hasAlternateStream(),
                 hasLastChannel = viewModel.hasLastChannel(),
                 onAction = handlePlayerNoticeAction,
-                onBack = onBack
+                onBack = leavePlayer
             )
         }
 
@@ -939,7 +944,7 @@ fun PlayerScreen(
             onOpenCastRouteChooser = { playbackPlatformHost?.openCastRouteChooser() },
             onScheduleByTime = { showScheduleByTimeDialog = true },
             showBackButton = backButtonPlacement == PlayerBackButtonPlacement.CONTROLS_TOP_BAR,
-            onBackToMenu = onBack
+            onBackToMenu = leavePlayer
         )
 
         PlayerNumericInputOverlayHost(
@@ -1021,7 +1026,7 @@ fun PlayerScreen(
             PlayerClosePlaybackConfirmation(
                 onConfirm = {
                     showClosePlaybackConfirmation = false
-                    onBack()
+                    leavePlayer()
                 },
                 onCancel = { showClosePlaybackConfirmation = false }
             )
@@ -1102,7 +1107,7 @@ fun PlayerScreen(
                 showEpgOverlay = showEpgOverlay,
                 showChannelInfoOverlay = showChannelInfoOverlay,
                 showBackButton = backButtonPlacement == PlayerBackButtonPlacement.CHANNEL_INFO_OVERLAY,
-                onBackToMenu = onBack,
+                onBackToMenu = leavePlayer,
                 currentChannel = currentChannel,
                 internalChannelId = internalChannelId,
                 displayChannelNumber = displayChannelNumber,
@@ -1131,7 +1136,7 @@ fun PlayerScreen(
                 },
                 onStop = {
                     playerEngine.stop()
-                    onBack()
+                    leavePlayer()
                 },
                 modifier = Modifier.fillMaxSize()
             )

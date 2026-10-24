@@ -52,6 +52,9 @@ interface SettingsPreferences {
 
     val playerMediaSessionEnabled: Flow<Boolean>
 
+    /** APEX TV: keep playing in a system picture-in-picture window when the user leaves the app. */
+    val pipOnLeaveEnabled: Flow<Boolean>
+
     val playerBackButtonVisibility: Flow<PlayerBackButtonVisibility>
 
     val playerConfirmClosePlayback: Flow<Boolean>
@@ -250,6 +253,8 @@ interface SettingsPreferences {
     )
 
     suspend fun setPlayerMediaSessionEnabled(enabled: Boolean)
+
+    suspend fun setPipOnLeaveEnabled(enabled: Boolean)
 
     suspend fun setPlayerBackButtonVisibility(visibility: PlayerBackButtonVisibility)
 

@@ -24,6 +24,7 @@ class PreferenceBackupRegistryTest {
             "remote_shortcut_live_red",
             "hidden_categories_42_LIVE",
             "hidden_channels_42",
+            "custom_channel_order_42_7",
             "pinned_categories_42_LIVE",
             "category_sort_42_LIVE",
             "aspect_ratio_123", "automatic_sync_provider_42", "automatic_sync_status_42"
@@ -34,6 +35,7 @@ class PreferenceBackupRegistryTest {
             "remoteShortcutKey(profile, button",
             "hiddenCategoriesKey(providerId, type",
             "hiddenChannelsKey(providerId",
+            "customChannelOrderKeyName(providerId, categoryId",
             "pinnedCategoriesKey(providerId, type",
             "categorySortModeKey(providerId, type", "sportsEventChannelPickKeyName(eventId", "keyName"
         )

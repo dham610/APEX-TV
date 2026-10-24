@@ -184,12 +184,28 @@ fun LiveEpgScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         viewModel.reconcileProgramReminders()
     }
+    // APEX TV: no channel sound once the app leaves the screen (Home button, other app).
+    val hostContext = LocalContext.current
+    DisposableEffect(viewModel, hostContext) {
+        val owner = generateSequence(hostContext) { (it as? android.content.ContextWrapper)?.baseContext }
+            .firstOrNull { it is androidx.lifecycle.LifecycleOwner } as? androidx.lifecycle.LifecycleOwner
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) viewModel.clearPreview()
+        }
+        owner?.lifecycle?.addObserver(observer)
+        onDispose { owner?.lifecycle?.removeObserver(observer) }
+    }
+    // The view model can outlive the screen, so pick up a channel parked while other tabs were open.
+    LaunchedEffect(viewModel) {
+        viewModel.adoptBackgroundPreview()
+    }
     var selectedProgram by remember { mutableStateOf<Pair<Channel, Program>?>(null) }
     var focusedChannel by remember { mutableStateOf<Channel?>(null) }
     var focusedProgram by remember { mutableStateOf<Program?>(null) }
     var topNavVisible by rememberSaveable { mutableStateOf(true) }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
     var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
+    var reorderChannelId by remember { mutableStateOf<Long?>(null) }
     var showNewCategoryDialog by remember { mutableStateOf(false) }
     var channelOptions by remember { mutableStateOf<Pair<Channel, Program?>?>(null) }
     val guideFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
@@ -280,7 +296,7 @@ fun LiveEpgScreen(
     }
 
     DisposableEffect(viewModel) {
-        onDispose { viewModel.clearPreview() }
+        onDispose { viewModel.parkOrClearPreview() }
     }
 
     val hasActivePreview = uiState.previewPlayerEngine != null
@@ -433,6 +449,22 @@ fun LiveEpgScreen(
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
                 .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    // APEX TV: while moving a channel, Up/Down reorder it and OK or Back finishes.
+                    val moving = reorderChannelId
+                    if (moving == null || event.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                        false
+                    } else when (event.key) {
+                        androidx.compose.ui.input.key.Key.DirectionUp -> { viewModel.moveChannel(moving, -1); true }
+                        androidx.compose.ui.input.key.Key.DirectionDown -> { viewModel.moveChannel(moving, 1); true }
+                        androidx.compose.ui.input.key.Key.DirectionCenter,
+                        androidx.compose.ui.input.key.Key.Enter,
+                        androidx.compose.ui.input.key.Key.Back -> { reorderChannelId = null; true }
+                        androidx.compose.ui.input.key.Key.DirectionLeft,
+                        androidx.compose.ui.input.key.Key.DirectionRight -> true
+                        else -> false
+                    }
+                }
                 .onKeyEvent { event ->
                     // APEX TV: Left opens the category panel only when focus can't move any further left.
                     if (!showCategoryPanel &&
@@ -471,7 +503,7 @@ fun LiveEpgScreen(
             isPreviewLoading = uiState.isPreviewLoading,
             focusedChannel = focusedChannel,
             focusedProgram = focusedProgram,
-            selectedChannelId = uiState.previewChannelId,
+            selectedChannelId = reorderChannelId ?: uiState.previewChannelId,
             onPreviewClick = {
                 val previewed = uiState.channels.firstOrNull { it.id == uiState.previewChannelId }
                 if (previewed != null) {
@@ -651,6 +683,19 @@ fun LiveEpgScreen(
                         selectedProgram = channel to program
                     })
                 }
+                add(LiveGuideChannelOption("Move channel") {
+                    channelOptions = null
+                    reorderChannelId = channel.id
+                    android.widget.Toast.makeText(
+                        context,
+                        "Move ${channel.name}: Up/Down to move, OK when done",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                })
+                add(LiveGuideChannelOption("Reset channel order") {
+                    channelOptions = null
+                    viewModel.resetCustomChannelOrder()
+                })
                 add(LiveGuideChannelOption("Hide channel") {
                     channelOptions = null
                     viewModel.hideChannel(channel)

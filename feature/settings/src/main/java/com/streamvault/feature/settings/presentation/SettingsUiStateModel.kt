@@ -95,6 +95,7 @@ data class SettingsUiState(
     val appTheme: AppTheme = AppTheme.DEFAULT,
     val preferredAudioLanguage: String = "auto",
     val playerMediaSessionEnabled: Boolean = true,
+    val pipOnLeaveEnabled: Boolean = false,
     val playerBackButtonVisibility: PlayerBackButtonVisibility = PlayerBackButtonVisibility.DEFAULT,
     val playerConfirmClosePlayback: Boolean = false,
     val playerFastRetryOnTransientFailures: Boolean = false,

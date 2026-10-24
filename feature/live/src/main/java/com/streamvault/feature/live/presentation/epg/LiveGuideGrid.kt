@@ -65,6 +65,9 @@ fun LiveGuideGrid(
         GuideDensity.CINEMATIC -> 52.dp
     }
     val horizontalScrollState = rememberScrollState()
+    val duplicateChannelIds = remember(channels) {
+        channels.groupingBy { it.id }.eachCount().filterValues { it > 1 }.keys
+    }
     val verticalListState = rememberLazyListState()
     val resolvedInitialChannelId = initialFocusedChannelId ?: channels.firstOrNull()?.id
     val initialFocusRequester = remember(resolvedInitialChannelId) { FocusRequester() }
@@ -114,7 +117,11 @@ fun LiveGuideGrid(
             ) {
                 itemsIndexed(
                     items = channels,
-                    key = { index, channel -> liveEpgChannelKey(channel, index) },
+                    // APEX TV: omit the row index unless a channel repeats, so a moved row keeps its focus.
+                    key = { index, channel ->
+                        if (channel.id in duplicateChannelIds) liveEpgChannelKey(channel, index)
+                        else "channel:${channel.id}"
+                    },
                     contentType = { _, _ -> "epg_channel" }
                 ) { index, channel ->
                     if (index >= channels.size - 15) {

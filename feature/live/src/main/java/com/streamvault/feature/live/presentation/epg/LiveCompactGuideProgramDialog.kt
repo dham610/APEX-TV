@@ -85,7 +85,7 @@ fun LiveCompactGuideProgramDialog(
 
     LiveCompactGuideModal(onDismiss = onDismiss) {
         Surface(
-            modifier = Modifier.widthIn(min = 420.dp, max = 640.dp),
+            modifier = Modifier.widthIn(min = 420.dp, max = 640.dp).swallowHeldOkKey(),
             colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
             shape = BrowseShapes.Panel
         ) {

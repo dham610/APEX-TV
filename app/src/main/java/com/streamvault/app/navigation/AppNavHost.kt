@@ -4,6 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.dp
 import com.streamvault.app.navigation.graph.registerLiveGraph
 import com.streamvault.app.ui.components.shell.AppNavigationChrome
 import com.streamvault.app.ui.components.shell.AppScreenScaffold
@@ -51,6 +55,7 @@ internal fun AppNavHost(
     onTopLevelDestinationRequested: (AppDestination) -> Unit,
     onCloseApp: () -> Unit
 ) {
+    androidx.compose.foundation.layout.Box {
     NavHost(
         navController = navController,
         startDestination = SystemRoutePatterns.WELCOME
@@ -185,6 +190,21 @@ internal fun AppNavHost(
                 )
             }
         )
+    }
+    // APEX TV: PiP for a channel that keeps playing while other tabs are open.
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentRouteName = currentEntry?.destination?.route
+    if (currentRouteName != null &&
+        currentRouteName != AppRoutePatterns.EPG &&
+        currentRouteName != AppRoutePatterns.PLAYER &&
+        currentRouteName != SystemRoutePatterns.WELCOME
+    ) {
+        com.streamvault.app.ui.components.shell.BackgroundPlaybackPip(
+            modifier = androidx.compose.ui.Modifier
+                .align(androidx.compose.ui.Alignment.BottomEnd)
+                .padding(24.dp)
+        )
+    }
     }
 }
 

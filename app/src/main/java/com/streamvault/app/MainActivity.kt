@@ -169,6 +169,10 @@ class MainActivity : ComponentActivity(), CatalogPlatformHost {
 
     private var playerPictureInPictureState = PlayerPictureInPictureState()
 
+    /** APEX TV: Settings > Playback > "Keep playing when I leave the app". */
+    @Volatile
+    private var pipOnLeaveSetting = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
@@ -185,6 +189,12 @@ class MainActivity : ComponentActivity(), CatalogPlatformHost {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         applyImmersiveSystemUi()
         _pictureInPictureModeFlow.value = isInPictureInPictureMode
+        lifecycleScope.launch {
+            preferencesRepository.pipOnLeaveEnabled.collect { enabled ->
+                pipOnLeaveSetting = enabled
+                applyPlayerPictureInPictureParams()
+            }
+        }
         handleExternalIntent(intent)
         if (isTelevisionDevice()) {
             // Lock TVs to landscape — the manifest uses "unspecified" so phones/tablets
@@ -307,7 +317,8 @@ class MainActivity : ComponentActivity(), CatalogPlatformHost {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        enterPlayerPictureInPictureModeIfEligible()
+        // APEX TV: only auto-enter picture-in-picture when the user turned that setting on.
+        if (pipOnLeaveSetting) enterPlayerPictureInPictureModeIfEligible()
     }
 
     override fun onPictureInPictureModeChanged(
@@ -422,16 +433,17 @@ class MainActivity : ComponentActivity(), CatalogPlatformHost {
         }
 
         fun apply(activity: MainActivity, state: PlayerPictureInPictureState) {
-            activity.setPictureInPictureParams(build(state))
+            activity.setPictureInPictureParams(build(state, activity.pipOnLeaveSetting))
         }
 
         private fun build(
-            state: PlayerPictureInPictureState
+            state: PlayerPictureInPictureState,
+            autoEnterOnLeave: Boolean = true
         ): android.app.PictureInPictureParams {
             val builder = android.app.PictureInPictureParams.Builder()
             state.aspectRatio?.let { builder.setAspectRatio(it) }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                builder.setAutoEnterEnabled(state.enabled && state.isPlaying)
+                builder.setAutoEnterEnabled(autoEnterOnLeave && state.enabled && state.isPlaying)
             }
             return builder.build()
         }

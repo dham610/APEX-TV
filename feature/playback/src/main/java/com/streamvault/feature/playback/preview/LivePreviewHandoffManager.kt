@@ -28,6 +28,52 @@ class LivePreviewHandoffManager @Inject constructor() {
     private val reverseSession: LivePreviewHandoffSession?
         get() = _reverseSessionFlow.value
 
+    /** APEX TV: a live channel that keeps playing (audio, optional PiP) while the user browses other tabs. */
+    data class BackgroundLiveSession(
+        val engine: PlayerEngine,
+        val channelId: Long,
+        val providerId: Long,
+        val channelName: String,
+        val streamInfo: StreamInfo
+    )
+
+    private val _backgroundSession = MutableStateFlow<BackgroundLiveSession?>(null)
+    val backgroundSessionFlow: StateFlow<BackgroundLiveSession?> = _backgroundSession.asStateFlow()
+    private val _pipVisible = MutableStateFlow(true)
+    val pipVisible: StateFlow<Boolean> = _pipVisible.asStateFlow()
+
+    fun setPipVisible(visible: Boolean) {
+        _pipVisible.value = visible
+    }
+
+    fun parkInBackground(channel: Channel, streamInfo: StreamInfo, engine: PlayerEngine) {
+        val previous = _backgroundSession.value
+        if (previous != null && previous.engine !== engine) {
+            previous.engine.stop()
+            previous.engine.release()
+        }
+        _backgroundSession.value = BackgroundLiveSession(
+            engine = engine,
+            channelId = channel.id,
+            providerId = channel.providerId,
+            channelName = channel.name,
+            streamInfo = streamInfo
+        )
+    }
+
+    fun takeBackground(): BackgroundLiveSession? {
+        val current = _backgroundSession.value ?: return null
+        _backgroundSession.value = null
+        return current
+    }
+
+    fun stopBackground() {
+        val current = _backgroundSession.value ?: return
+        _backgroundSession.value = null
+        current.engine.stop()
+        current.engine.release()
+    }
+
     fun registerPreviewSession(
         channel: Channel,
         streamInfo: StreamInfo,

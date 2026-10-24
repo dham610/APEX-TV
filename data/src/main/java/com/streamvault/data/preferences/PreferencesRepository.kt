@@ -500,6 +500,7 @@ class PreferencesRepository @Inject constructor(
         val IS_INCOGNITO_MODE = booleanPreferencesKey("is_incognito_mode")
         val PLAYER_MUTED = booleanPreferencesKey("player_muted")
         val PLAYER_MEDIA_SESSION_ENABLED = booleanPreferencesKey("player_media_session_enabled")
+        val APEX_PIP_ON_LEAVE = booleanPreferencesKey("apex_pip_on_leave")
         val PLAYER_BACK_BUTTON_VISIBILITY = stringPreferencesKey("player_back_button_visibility")
         val PLAYER_CONFIRM_CLOSE_PLAYBACK = booleanPreferencesKey("player_confirm_close_playback")
         val PLAYER_FAST_RETRY_ON_TRANSIENT_FAILURES =
@@ -733,6 +734,16 @@ class PreferencesRepository @Inject constructor(
 
     override val playerMuted: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[PreferencesKeys.PLAYER_MUTED] ?: false
+    }
+
+    override val pipOnLeaveEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.APEX_PIP_ON_LEAVE] ?: false
+    }
+
+    override suspend fun setPipOnLeaveEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.APEX_PIP_ON_LEAVE] = enabled
+        }
     }
 
     override val playerMediaSessionEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -2723,6 +2734,26 @@ class PreferencesRepository @Inject constructor(
             } else {
                 preferences[key] = categoryIds.sorted().joinToString(",")
             }
+        }
+    }
+
+    private fun customChannelOrderKeyName(providerId: Long, categoryId: Long) =
+        "custom_channel_order_${providerId}_$categoryId"
+
+    private fun customChannelOrderKey(providerId: Long, categoryId: Long) =
+        stringPreferencesKey(customChannelOrderKeyName(providerId, categoryId))
+
+    /** APEX TV: user-defined channel order for one category of one provider (channel ids, first = top). */
+    suspend fun getCustomChannelOrder(providerId: Long, categoryId: Long): List<Long> =
+        context.dataStore.data.first()[customChannelOrderKey(providerId, categoryId)]
+            ?.split(',')
+            ?.mapNotNull { it.toLongOrNull() }
+            .orEmpty()
+
+    suspend fun setCustomChannelOrder(providerId: Long, categoryId: Long, channelIds: List<Long>) {
+        val key = customChannelOrderKey(providerId, categoryId)
+        context.dataStore.edit { preferences ->
+            if (channelIds.isEmpty()) preferences.remove(key) else preferences[key] = channelIds.joinToString(",")
         }
     }
 

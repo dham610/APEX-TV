@@ -55,6 +55,7 @@ fun observeSettingsPreferenceSnapshot(
             appTheme = AppTheme.DEFAULT,
             preferredAudioLanguage = "auto",
             playerMediaSessionEnabled = true,
+            pipOnLeaveEnabled = false,
             playerBackButtonVisibility = PlayerBackButtonVisibility.DEFAULT,
             playerConfirmClosePlayback = false,
             playerFastRetryOnTransientFailures = false,
@@ -156,6 +157,8 @@ fun observeSettingsPreferenceSnapshot(
         snapshot.copy(pinnedSubtitleLanguages = pinnedSubtitleLanguages)
     }.combine(preferencesRepository.playerMediaSessionEnabled) { snapshot, mediaSessionEnabled ->
         snapshot.copy(playerMediaSessionEnabled = mediaSessionEnabled)
+    }.combine(preferencesRepository.pipOnLeaveEnabled) { snapshot, pipOnLeave ->
+        snapshot.copy(pipOnLeaveEnabled = pipOnLeave)
     }.combine(preferencesRepository.playerBackButtonVisibility) { snapshot, visibility ->
         snapshot.copy(playerBackButtonVisibility = visibility)
     }.combine(preferencesRepository.playerConfirmClosePlayback) { snapshot, confirmClosePlayback ->

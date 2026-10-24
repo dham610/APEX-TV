@@ -27,6 +27,10 @@ class PlayerPreviewCoordinator @Inject constructor(
     ): LivePreviewHandoffManager.LivePreviewHandoffSession? =
         handoffManager.consumeFullscreenHandoff(channelId, providerId)
 
+    internal fun stopBackgroundPreview() {
+        handoffManager.stopBackground()
+    }
+
     internal fun clear(engine: PlayerEngine?) {
         handoffManager.clear(engine)
     }

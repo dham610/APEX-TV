@@ -66,7 +66,7 @@ fun LiveGuideChannelOptionsDialog(
 
     Dialog(onDismissRequest = { if (showGroups) showGroups = false else onDismiss() }) {
         Surface(
-            modifier = Modifier.width(380.dp).focusGroup(),
+            modifier = Modifier.width(380.dp).focusGroup().swallowHeldOkKey(),
             colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
             shape = BrowseShapes.Panel
         ) {

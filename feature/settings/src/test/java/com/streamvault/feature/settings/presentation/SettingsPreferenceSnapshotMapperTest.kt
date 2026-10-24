@@ -62,6 +62,7 @@ class SettingsPreferenceSnapshotMapperTest {
         appTheme = AppTheme.M3_PURPLE,
         preferredAudioLanguage = "auto",
         playerMediaSessionEnabled = true,
+        pipOnLeaveEnabled = false,
         playerBackButtonVisibility = PlayerBackButtonVisibility.ALWAYS,
         playerConfirmClosePlayback = false,
         playerFastRetryOnTransientFailures = false,

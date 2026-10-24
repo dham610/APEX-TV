@@ -133,6 +133,20 @@ class AppLivePreviewHandoffAdapter @Inject constructor(
             )
         }
 
+    override fun parkInBackground(channel: Channel, streamInfo: StreamInfo, engine: PlayerEngine) {
+        manager.parkInBackground(channel, streamInfo, engine)
+    }
+
+    override fun takeBackground(): LivePreviewSession? =
+        manager.takeBackground()?.let { session ->
+            LivePreviewSession(
+                engine = session.engine,
+                channelId = session.channelId,
+                providerId = session.providerId,
+                streamInfo = session.streamInfo,
+            )
+        }
+
     override fun clear(engine: PlayerEngine?) {
         manager.clear(engine)
     }

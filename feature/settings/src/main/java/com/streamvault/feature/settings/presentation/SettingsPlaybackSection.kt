@@ -452,6 +452,13 @@ public fun LazyListScope.settingsPlaybackSection(
                     modifier = if (targetItemId == "playback.refresh_rate_matching") targetFocusModifier else Modifier,
                 )
                 SwitchSettingsRow(
+                    label = stringResource(R.string.settings_pip_on_leave),
+                    value = stringResource(R.string.settings_pip_on_leave_subtitle),
+                    checked = uiState.pipOnLeaveEnabled,
+                    onCheckedChange = viewModel::setPipOnLeaveEnabled,
+                    modifier = if (targetItemId == "playback.pip_on_leave") targetFocusModifier else Modifier,
+                )
+                SwitchSettingsRow(
                     label = stringResource(R.string.settings_media_session),
                     value = stringResource(R.string.settings_media_session_subtitle),
                     checked = uiState.playerMediaSessionEnabled,

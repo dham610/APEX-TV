@@ -323,6 +323,8 @@ class EpgViewModel @Inject constructor(
     private var combinedCategoriesById: Map<Long, CombinedCategory> = emptyMap()
     private var previewPlayerEngine: PlayerEngine? = null
     private var previewSessionVersion: Long = 0L
+    private var previewedChannel: Channel? = null
+    private var previewStreamInfo: com.streamvault.domain.model.StreamInfo? = null
     private var previewPlaybackJob: Job? = null
     private var previewErrorJob: Job? = null
 
@@ -331,6 +333,7 @@ class EpgViewModel @Inject constructor(
         observeGuideBase()
         observeGuidePresentation()
         observeReminderDeliveryIssues()
+        adoptBackgroundPreview()
         viewModelScope.launch {
             livePreviewHandoffManager.reverseHandoffOrigin.collect { origin ->
                 if (origin == LivePreviewOrigin.GUIDE) {
@@ -379,6 +382,8 @@ class EpgViewModel @Inject constructor(
 
     fun previewChannel(channel: Channel) {
         if (_uiState.value.previewChannelId == channel.id && _uiState.value.previewPlayerEngine != null) return
+        previewedChannel = channel
+        previewStreamInfo = null
         val version = ++previewSessionVersion
         val engine = previewPlayerEngine ?: playerEngineProvider.get().also { previewPlayerEngine = it }
         previewPlaybackJob?.cancel()
@@ -435,6 +440,7 @@ class EpgViewModel @Inject constructor(
                         Result.Loading -> result.data
                     }
                     if (!isActivePreviewSession(version, channel.id)) return@launch
+                    previewStreamInfo = preparedStreamInfo
                     engine.stop()
                     engine.setDecoderModes(
                         audioMode = preferencesRepository.playerAudioDecoderMode.first(),
@@ -485,7 +491,55 @@ class EpgViewModel @Inject constructor(
 
     fun resumePreviewFromHandoff() {
         val session = livePreviewHandoffManager.consumeReverseHandoff(LivePreviewOrigin.GUIDE) ?: return
+        adoptPreviewSession(session)
+    }
+
+    /** APEX TV: pick up a channel that kept playing in the background while other tabs were open. */
+    fun adoptBackgroundPreview() {
+        val session = livePreviewHandoffManager.takeBackground() ?: return
+        adoptPreviewSession(session)
+    }
+
+    /**
+     * APEX TV: leaving the Guide for another tab keeps the previewed channel playing (audio, optional
+     * PiP). Returns true when the stream was parked; otherwise the caller should clear the preview.
+     */
+    fun parkPreviewInBackground(): Boolean {
+        val engine = previewPlayerEngine ?: return false
+        val previewId = _uiState.value.previewChannelId ?: return false
+        val channel = previewedChannel?.takeIf { it.id == previewId }
+            ?: _uiState.value.channels.firstOrNull { it.id == previewId }
+            ?: return false
+        val streamInfo = previewStreamInfo ?: return false
+        if (engine.playbackState.value == PlaybackState.ERROR) return false
+        previewSessionVersion++
+        previewPlaybackJob?.cancel()
+        previewErrorJob?.cancel()
+        previewPlaybackJob = null
+        previewErrorJob = null
+        livePreviewHandoffManager.clear(engine)
+        livePreviewHandoffManager.parkInBackground(channel, streamInfo, engine)
+        previewPlayerEngine = null
+        _uiState.update {
+            it.copy(
+                previewChannelId = null,
+                previewPlayerEngine = null,
+                isPreviewLoading = false,
+                previewErrorMessage = null
+            )
+        }
+        return true
+    }
+
+    fun parkOrClearPreview() {
+        if (!parkPreviewInBackground()) clearPreview()
+    }
+
+    private fun adoptPreviewSession(session: com.streamvault.feature.live.api.LivePreviewSession) {
+        android.util.Log.i("ApexHandoff", "guide adopts preview t=${android.os.SystemClock.elapsedRealtime()}")
         val engine = session.engine
+        previewStreamInfo = session.streamInfo
+        previewedChannel = _uiState.value.channels.firstOrNull { it.id == session.channelId }
         previewSessionVersion++
         val version = previewSessionVersion
         previewPlaybackJob?.cancel()
@@ -916,6 +970,39 @@ class EpgViewModel @Inject constructor(
             }
             favoriteRepository.createGroup(providerId, trimmed, contentType = ContentType.LIVE)
             _uiState.update { it.copy(recordingMessage = "Created category $trimmed") }
+        }
+    }
+
+    private fun applyCustomChannelOrder(channels: List<Channel>, order: List<Long>): List<Channel> {
+        val position = order.withIndex().associate { (index, id) -> id to index }
+        return channels.withIndex()
+            .sortedWith(compareBy({ position[it.value.id] ?: Int.MAX_VALUE }, { it.index }))
+            .map { it.value }
+    }
+
+    /** Moves a channel up (-1) or down (+1) in the current list and remembers the order for this category. */
+    fun moveChannel(channelId: Long, delta: Int) {
+        val snapshot = baseGuideSnapshot.value ?: return
+        val current = _uiState.value.channels
+        val from = current.indexOfFirst { it.id == channelId }
+        val to = from + delta
+        if (from < 0 || to !in current.indices) return
+        val reordered = current.toMutableList().apply { add(to, removeAt(from)) }
+        _uiState.update { it.copy(channels = reordered) }
+        viewModelScope.launch {
+            preferencesRepository.setCustomChannelOrder(
+                snapshot.providerId,
+                snapshot.selectedCategoryId,
+                reordered.map { it.id }
+            )
+        }
+    }
+
+    fun resetCustomChannelOrder() {
+        val snapshot = baseGuideSnapshot.value ?: return
+        viewModelScope.launch {
+            preferencesRepository.setCustomChannelOrder(snapshot.providerId, snapshot.selectedCategoryId, emptyList())
+            refresh()
         }
     }
 
@@ -1557,12 +1644,21 @@ class EpgViewModel @Inject constructor(
                     return@collectLatest
                 }
 
-                val displaySnapshot = buildGuideDisplaySnapshot(
+                val builtSnapshot = buildGuideDisplaySnapshot(
                     baseSnapshot = baseSnapshot,
                     searchQuery = presentation.searchQuery,
                     scheduledOnly = presentation.scheduledOnly,
                     channelMode = presentation.channelMode
                 )
+                val customOrder = preferencesRepository.getCustomChannelOrder(
+                    baseSnapshot.providerId,
+                    baseSnapshot.selectedCategoryId
+                )
+                val displaySnapshot = if (customOrder.isEmpty()) {
+                    builtSnapshot
+                } else {
+                    builtSnapshot.copy(channels = applyCustomChannelOrder(builtSnapshot.channels, customOrder))
+                }
 
                 _uiState.update {
                     it.copy(

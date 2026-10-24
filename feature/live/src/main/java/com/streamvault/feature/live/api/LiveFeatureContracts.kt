@@ -47,6 +47,10 @@ interface LivePreviewHandoffPort {
 
     fun consumeReverseHandoff(origin: LivePreviewOrigin): LivePreviewSession?
 
+    fun parkInBackground(channel: Channel, streamInfo: StreamInfo, engine: PlayerEngine)
+
+    fun takeBackground(): LivePreviewSession?
+
     fun clear(engine: PlayerEngine?)
 }
 
