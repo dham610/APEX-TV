@@ -78,7 +78,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.streamvault.app"
+        applicationId = "com.apex10.tv"
         minSdk = 25
         targetSdk = 36
         versionCode = 24
