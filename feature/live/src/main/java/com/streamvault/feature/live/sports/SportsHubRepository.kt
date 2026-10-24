@@ -946,12 +946,20 @@ internal class SportsHubRepository @Inject constructor(
         // APEX TV: most channels are not linked to an XMLTV source, but the provider still supplies
         // programmes for them. The Guide reads those native programmes too; do the same here so sports
         // on every channel are found, not only on the few that are linked.
-        val programsByChannelKey = resolvedProgramsByKey + nativeProgramsForUnresolvedChannels(
+        val withNativePrograms = resolvedProgramsByKey + nativeProgramsForUnresolvedChannels(
             providerId = providerId,
             channels = channels,
             resolvedProgramsByKey = resolvedProgramsByKey,
             window = window,
         )
+        // Event channels ("... | Nets vs. Cavaliers (2026-10-24 19:30:05)") carry the game in their name.
+        val programsByChannelKey = withNativePrograms + channels.mapNotNull { channel ->
+            val key = channel.streamId.takeIf { it > 0L }?.toString()
+                ?: channel.epgChannelId?.trim()?.takeIf(String::isNotEmpty)
+                ?: return@mapNotNull null
+            if (!withNativePrograms[key].isNullOrEmpty()) return@mapNotNull null
+            SportsEventChannelParser.programFor(channel, key)?.let { program -> key to listOf(program) }
+        }.toMap()
         SportsDiagnostics.performance(
             stage = "resolved-programs",
             elapsedMillis = SystemClock.elapsedRealtime() - programsStartedAt,

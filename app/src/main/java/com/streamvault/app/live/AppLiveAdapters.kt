@@ -139,6 +139,8 @@ class AppLivePreviewHandoffAdapter @Inject constructor(
 
     override fun consumeLastPlayedLive(): Long? = manager.consumeLastPlayedLive()
 
+    override fun noteLastPlayedLive(channelId: Long) = manager.noteLastPlayedLive(channelId)
+
     override fun takeBackground(): LivePreviewSession? =
         manager.takeBackground()?.let { session ->
             LivePreviewSession(

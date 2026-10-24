@@ -548,7 +548,13 @@ class EpgViewModel @Inject constructor(
     }
 
     fun parkOrClearPreview() {
-        if (!parkPreviewInBackground()) clearPreview()
+        val previewedId = _uiState.value.previewChannelId
+        if (!parkPreviewInBackground()) {
+            // Could not keep it playing (still loading, or it failed): remember it so coming back to the
+            // Guide previews the same channel again instead of showing an empty window.
+            previewedId?.let(livePreviewHandoffManager::noteLastPlayedLive)
+            clearPreview()
+        }
     }
 
     private fun adoptPreviewSession(session: com.streamvault.feature.live.api.LivePreviewSession) {

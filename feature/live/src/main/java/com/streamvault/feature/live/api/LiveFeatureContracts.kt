@@ -54,6 +54,8 @@ interface LivePreviewHandoffPort {
     /** The live channel last shown full screen, once; null if none or already used. */
     fun consumeLastPlayedLive(): Long?
 
+    fun noteLastPlayedLive(channelId: Long)
+
     fun clear(engine: PlayerEngine?)
 }
 
