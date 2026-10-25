@@ -128,6 +128,8 @@ data class EpgUiState(
     val isPreviewLoading: Boolean = false,
     val previewErrorMessage: String? = null,
     val previewChannelId: Long? = null,
+    /** The channel being previewed, even when it is not in the category currently listed. */
+    val previewChannel: Channel? = null,
 ) {
     companion object {
         private val DEFAULT_NOW = System.currentTimeMillis()
@@ -391,6 +393,7 @@ class EpgViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 previewChannelId = channel.id,
+                previewChannel = channel,
                 previewPlayerEngine = engine,
                 isPreviewLoading = true,
                 previewErrorMessage = null
@@ -481,6 +484,7 @@ class EpgViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 previewChannelId = null,
+                previewChannel = null,
                 previewPlayerEngine = null,
                 isPreviewLoading = false,
                 previewErrorMessage = null
@@ -523,6 +527,7 @@ class EpgViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 previewChannelId = null,
+                previewChannel = null,
                 previewPlayerEngine = null,
                 isPreviewLoading = false,
                 previewErrorMessage = null
@@ -544,6 +549,13 @@ class EpgViewModel @Inject constructor(
                 ?: return@launch
             // The handed-back stream may have arrived while we looked the channel up.
             if (_uiState.value.previewChannelId == null) previewChannel(channel)
+            // A channel from another category (for example one opened from Sports) would not be in the
+            // list; show all channels so it can be found and selected.
+            if (_uiState.value.channels.none { it.id == channelId } &&
+                _uiState.value.selectedCategoryId != ChannelRepository.ALL_CHANNELS_ID
+            ) {
+                selectCategory(ChannelRepository.ALL_CHANNELS_ID)
+            }
         }
     }
 
@@ -584,10 +596,21 @@ class EpgViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 previewChannelId = session.channelId,
+                previewChannel = previewedChannel,
                 previewPlayerEngine = engine,
                 isPreviewLoading = false,
                 previewErrorMessage = null
             )
+        }
+        if (previewedChannel == null) {
+            viewModelScope.launch {
+                channelRepository.getChannel(session.channelId)?.let { channel ->
+                    previewedChannel = channel
+                    _uiState.update { state ->
+                        if (state.previewChannelId == channel.id) state.copy(previewChannel = channel) else state
+                    }
+                }
+            }
         }
         previewPlaybackJob = viewModelScope.launch {
             engine.playbackState.collectLatest { state ->
@@ -613,6 +636,7 @@ class EpgViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 previewChannelId = null,
+                previewChannel = null,
                 previewPlayerEngine = null,
                 isPreviewLoading = false,
                 previewErrorMessage = null

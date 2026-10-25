@@ -14,6 +14,7 @@ import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlay
 import com.streamvault.feature.live.presentation.epg.LiveGuideSearchOverlayLabels
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategoryPickerDialog
 import com.streamvault.feature.live.presentation.epg.LiveGuideCategorySidePanel
+import com.streamvault.feature.live.presentation.model.guideLookupKey
 import com.streamvault.feature.live.presentation.epg.LiveGuideChannelOption
 import com.streamvault.feature.live.presentation.epg.LiveGuideChannelOptionsDialog
 import androidx.compose.ui.graphics.graphicsLayer
@@ -504,12 +505,17 @@ fun LiveEpgScreen(
             isRefreshing = uiState.isRefreshing,
             previewPlayerEngine = uiState.previewPlayerEngine,
             isPreviewLoading = uiState.isPreviewLoading,
-            focusedChannel = focusedChannel,
-            focusedProgram = focusedProgram,
+            // The preview window shows the previewed channel, so describe that channel, not the focused row.
+            focusedChannel = uiState.previewChannel ?: focusedChannel,
+            focusedProgram = uiState.previewChannel?.let { playing ->
+                val now = System.currentTimeMillis()
+                playing.guideLookupKey()?.let { key -> uiState.programsByChannel[key] }
+                    ?.firstOrNull { now in it.startTime until it.endTime }
+            } ?: if (uiState.previewChannel != null) null else focusedProgram,
             selectedChannelId = reorderChannelId ?: uiState.previewChannelId,
             focusResetKey = Triple(uiState.selectedCategoryId, uiState.showFavoritesOnly, uiState.programSearchQuery),
             onPreviewClick = {
-                val previewed = uiState.channels.firstOrNull { it.id == uiState.previewChannelId }
+                val previewed = uiState.previewChannel
                 if (previewed != null) {
                     viewModel.handoffOrClearForFullscreen(previewed)
                     onPlayChannel(
@@ -738,7 +744,7 @@ fun LiveEpgScreen(
     androidx.activity.compose.BackHandler(
         enabled = uiState.previewChannelId != null && !showCategoryPanel
     ) {
-        val playing = uiState.channels.firstOrNull { it.id == uiState.previewChannelId }
+        val playing = uiState.previewChannel
         if (playing != null) {
             viewModel.handoffOrClearForFullscreen(playing)
             onPlayChannel(
