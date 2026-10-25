@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -302,6 +303,8 @@ fun LiveGuideGridRow(
                                 windowStart = windowStart,
                                 windowEnd = windowEnd,
                                 totalTimelineWidth = totalTimelineWidth,
+                                scrollState = scrollState,
+                                viewportWidth = timelineViewportWidth,
                                 onClick = { onProgramClick(program) },
                                 onLongClick = onProgramLongClick?.let { cb -> { cb(program) } },
                                 onFocused = { onProgramFocused(program) }
@@ -314,6 +317,7 @@ fun LiveGuideGridRow(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun LiveGuideProgramItem(
     program: Program,
@@ -322,11 +326,14 @@ fun LiveGuideProgramItem(
     windowStart: Long,
     windowEnd: Long,
     totalTimelineWidth: Dp,
+    scrollState: androidx.compose.foundation.ScrollState? = null,
+    viewportWidth: Dp = 0.dp,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     onFocused: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val pxDensity = androidx.compose.ui.platform.LocalDensity.current
     val now = currentLiveGuideNow()
     val isCurrent = now in program.startTime until program.endTime
 
@@ -402,7 +409,19 @@ fun LiveGuideProgramItem(
                     onFocused()
                 }
                 isFocused = it.isFocused
-            },
+            }
+            // APEX TV: a programme that is already partly on screen must not drag the whole guide back to its
+            // start time (a 12:00 show at 2:00 PM used to scroll everything to 12:00). Only the part that is
+            // visible is requested, so the timeline stays on the current time like TiviMate.
+            .bringIntoViewResponder(
+                remember(scrollState, itemStart, viewportWidth, pxDensity) {
+                    visiblePartResponder(
+                        scrollPx = { scrollState?.value ?: 0 },
+                        cellLeftPx = with(pxDensity) { itemStart.toPx() },
+                        viewportPx = with(pxDensity) { viewportWidth.toPx() },
+                    )
+                }
+            ),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = when {
                 isCurrent && transparentOverlay -> Primary.copy(alpha = 0.28f)
@@ -448,4 +467,27 @@ fun LiveGuideProgramItem(
             }
         }
     }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun visiblePartResponder(
+    scrollPx: () -> Int,
+    cellLeftPx: Float,
+    viewportPx: Float,
+) = object : androidx.compose.foundation.relocation.BringIntoViewResponder {
+    override fun calculateRectForParent(localRect: androidx.compose.ui.geometry.Rect): androidx.compose.ui.geometry.Rect {
+        if (viewportPx <= 0f) return localRect
+        val viewLeft = scrollPx().toFloat()
+        val viewRight = viewLeft + viewportPx
+        val cellRight = cellLeftPx + localRect.right
+        // Only when the cell already overlaps the viewport: ask for just its visible slice.
+        if (cellRight <= viewLeft || cellLeftPx >= viewRight) return localRect
+        val left = (viewLeft - cellLeftPx).coerceAtLeast(localRect.left)
+        val right = (viewRight - cellLeftPx).coerceAtMost(localRect.right)
+        return if (right > left) {
+            androidx.compose.ui.geometry.Rect(left, localRect.top, right, localRect.bottom)
+        } else localRect
+    }
+
+    override suspend fun bringChildIntoView(localRect: () -> androidx.compose.ui.geometry.Rect?) = Unit
 }
