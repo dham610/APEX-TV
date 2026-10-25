@@ -35,15 +35,14 @@ fun liveGuideTimelineMarkers(
     windowEnd: Long,
     markerStepMs: Long = LIVE_GUIDE_MARKER_STEP_MS
 ): List<Long> {
-    val firstMarker = windowStart - (windowStart % markerStepMs)
+    // APEX TV: only markers inside the window. The old first marker (before the window) and the window-end marker
+    // were both clamped onto the window edges, which drew two time labels on top of each other.
+    var marker = windowStart - (windowStart % markerStepMs)
+    if (marker < windowStart) marker += markerStepMs
     return buildList {
-        var marker = firstMarker
         while (marker <= windowEnd) {
             add(marker)
             marker += markerStepMs
-        }
-        if (lastOrNull() != windowEnd) {
-            add(windowEnd)
         }
     }
 }

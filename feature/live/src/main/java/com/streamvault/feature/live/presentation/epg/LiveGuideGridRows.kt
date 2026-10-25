@@ -249,8 +249,8 @@ fun LiveGuideGridRow(
                 ) {
                     val markers = remember(windowStart, windowEnd, markerStepMs) {
                         buildList {
-                            val firstMarker = windowStart - (windowStart % markerStepMs)
-                            var marker = firstMarker
+                            var marker = windowStart - (windowStart % markerStepMs)
+                            if (marker < windowStart) marker += markerStepMs
                             while (marker <= windowEnd) {
                                 add(marker)
                                 marker += markerStepMs
@@ -324,7 +324,8 @@ fun LiveGuideProgramItem(
         GuideDensity.COMFORTABLE -> 48.dp
         GuideDensity.CINEMATIC -> 56.dp
     }
-    val itemWidth = (totalTimelineWidth * widthRatio).coerceAtLeast(minimumItemWidth)
+    // APEX TV: never wider than the real slot (minus a hairline gap), so neighbouring programmes can't overlap and blur.
+    val itemWidth = (totalTimelineWidth * widthRatio - 2.dp).coerceAtLeast(10.dp)
     val isCompactCell = itemWidth < 148.dp
     val isVeryCompactCell = itemWidth < 116.dp
     val outerVerticalPadding = when (density) {

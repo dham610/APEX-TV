@@ -5,9 +5,9 @@ import org.junit.Test
 
 class LiveGuideTimelineTest {
     @Test
-    fun `timeline markers include aligned markers and window end`() {
+    fun `timeline markers stay inside the window so labels never overlap`() {
         assertThat(liveGuideTimelineMarkers(10 * MINUTE_MS, 80 * MINUTE_MS, HALF_HOUR_MS))
-            .containsExactly(0L, 30 * MINUTE_MS, 60 * MINUTE_MS, 80 * MINUTE_MS)
+            .containsExactly(30 * MINUTE_MS, 60 * MINUTE_MS)
             .inOrder()
     }
 
