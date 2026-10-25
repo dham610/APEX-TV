@@ -480,8 +480,19 @@ private fun visiblePartResponder(
         val viewLeft = scrollPx().toFloat()
         val viewRight = viewLeft + viewportPx
         val cellRight = cellLeftPx + localRect.right
-        // Only when the cell already overlaps the viewport: ask for just its visible slice.
-        if (cellRight <= viewLeft || cellLeftPx >= viewRight) return localRect
+        // A cell completely off screen: ask for only the edge nearest the screen, at most half a viewport, so
+        // moving onto a long programme nudges the timeline instead of jumping to that programme's start.
+        val maxSlice = viewportPx * 0.5f
+        if (cellLeftPx >= viewRight) {
+            return androidx.compose.ui.geometry.Rect(
+                localRect.left, localRect.top, minOf(localRect.right, localRect.left + maxSlice), localRect.bottom,
+            )
+        }
+        if (cellRight <= viewLeft) {
+            return androidx.compose.ui.geometry.Rect(
+                maxOf(localRect.left, localRect.right - maxSlice), localRect.top, localRect.right, localRect.bottom,
+            )
+        }
         val left = (viewLeft - cellLeftPx).coerceAtLeast(localRect.left)
         val right = (viewRight - cellLeftPx).coerceAtMost(localRect.right)
         return if (right > left) {
