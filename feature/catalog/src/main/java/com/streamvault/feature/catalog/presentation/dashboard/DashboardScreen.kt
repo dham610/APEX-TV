@@ -229,6 +229,7 @@ fun DashboardScreen(
                             nowMs = nowMs,
                             isRecording = channel.id in recordingChannelIds,
                             isScheduledRecording = channel.id in scheduledChannelIds,
+                            sizeFraction = 0.5f,
                             onClick = { onRecentChannelClick(channel, uiState.currentCombinedProfileId) }
                         )
                     }

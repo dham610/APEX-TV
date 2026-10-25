@@ -51,4 +51,31 @@ class SportsEventChannelParserTest {
         assertThat(nbaClass.isCompetitiveEvent).isTrue()
         assertThat(nbaClass.sport).isEqualTo(SportType.BASKETBALL)
     }
+
+    @Test
+    fun parsesNumberedGameChannelsWithATimeOfDay() {
+        // 2026-10-24 12:00 UTC is 8:00 AM Eastern the same day.
+        val now = java.time.Instant.parse("2026-10-24T12:00:00Z").toEpochMilli()
+        val usc = SportsEventChannelParser.parse("NCAAF38: 7:30 PM USC vs Wisconsin", now)!!
+        assertThat(usc.title).isEqualTo("College Football: USC vs Wisconsin")
+        assertThat(usc.sportHint).isEqualTo("American Football")
+        val eastern = Instant.ofEpochMilli(usc.startTime).atZone(ZoneId.of("America/New_York"))
+        assertThat(eastern.hour).isEqualTo(19)
+        assertThat(eastern.minute).isEqualTo(30)
+        assertThat(eastern.dayOfMonth).isEqualTo(24)
+
+        val spaced = SportsEventChannelParser.parse("NCAAF 38: 2:30pm Chattanooga at Western Carolina", now)!!
+        assertThat(spaced.title).isEqualTo("College Football: Chattanooga at Western Carolina")
+
+        assertThat(SportsEventChannelParser.parse("NCAAF 39: No Event Today", now)).isNull()
+    }
+
+    @Test
+    fun nextGameFillerProgrammesAreNotGames() {
+        val program = com.streamvault.domain.model.Program(
+            channelId = "x", title = "Next Game: Los Angeles Lakers @ Utah Jazz on 2026-10-25 at 05:00PM EDT",
+        )
+        val channel = Channel(id = 1L, name = "NBA | LOS ANGELES LAKERS", streamUrl = "t://x", providerId = 1L)
+        assertThat(SportsProgrammeClassifier.classify(program, channel).isCompetitiveEvent).isFalse()
+    }
 }

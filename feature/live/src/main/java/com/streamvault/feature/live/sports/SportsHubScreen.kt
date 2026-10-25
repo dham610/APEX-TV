@@ -173,7 +173,8 @@ internal fun SportsHubContent(
     var manualPickerEvent by remember { mutableStateOf<SportsEvent?>(null) }
     val actionScope = rememberCoroutineScope()
     var inclusionsOpen by remember { mutableStateOf(false) }
-    val visibleEvents = state.events.filter { it.matchesDiscovery(state) }
+    // Earliest first, so a game on the 25th is never listed after one on the 30th.
+    val visibleEvents = state.events.filter { it.matchesDiscovery(state) }.sortedBy { it.startTime }
     val eflChampionshipLabel = stringResource(R.string.live_sports_league_efl_championship)
     val availableLeagues = state.events.asSequence()
         .filter { it.matches(state.selectedSportFilter) && it.sport.discoveryKey !in state.excludedSports &&

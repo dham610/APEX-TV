@@ -48,14 +48,15 @@ internal object SportsEventParser {
     )
 
     private val replayPattern = Regex(
-        """\b(?:replay|re-run|rerun|repeat|encore|classic\s+match)\b""",
+        """\b(?:replay|re-run|rerun|repeat|encore|classic\s+match|compacto|condensed\s+game)\b""",
         RegexOption.IGNORE_CASE,
     )
     private val highlightsPattern = Regex(
         """\b(?:highlights?|best\s+of)\b""",
         RegexOption.IGNORE_CASE,
     )
-    private val previewPattern = Regex("\\bpreview\\b", RegexOption.IGNORE_CASE)
+    // "Next Game: Lakers @ Jazz on 2026-10-25" is a filler programme on team channels, not the game itself.
+    private val previewPattern = Regex("\\bpreview\\b|^\\s*(?:next\\s+game|up\\s+next|next\\s+up)\\b", RegexOption.IGNORE_CASE)
     private val preGamePattern = Regex("\\bpre[ -]?game\\b|\\bpregame\\b", RegexOption.IGNORE_CASE)
     private val postGamePattern = Regex("\\bpost[ -]?(?:game|match)\\b", RegexOption.IGNORE_CASE)
     private val sportsNewsPattern = Regex("\\b(?:sports?\\s*news|sportscenter|newscast|weather|traffic)\\b", RegexOption.IGNORE_CASE)

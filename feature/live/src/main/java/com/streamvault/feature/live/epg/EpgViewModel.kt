@@ -130,6 +130,8 @@ data class EpgUiState(
     val previewChannelId: Long? = null,
     /** The channel being previewed, even when it is not in the category currently listed. */
     val previewChannel: Channel? = null,
+    /** A channel shown as the first guide row after returning from full screen, until the user previews another. */
+    val pinnedChannel: Channel? = null,
 ) {
     companion object {
         private val DEFAULT_NOW = System.currentTimeMillis()
@@ -394,6 +396,7 @@ class EpgViewModel @Inject constructor(
             it.copy(
                 previewChannelId = channel.id,
                 previewChannel = channel,
+                pinnedChannel = it.pinnedChannel?.takeIf { pinned -> pinned.id == channel.id },
                 previewPlayerEngine = engine,
                 isPreviewLoading = true,
                 previewErrorMessage = null
@@ -549,6 +552,7 @@ class EpgViewModel @Inject constructor(
                 ?: return@launch
             // The handed-back stream may have arrived while we looked the channel up.
             if (_uiState.value.previewChannelId == null) previewChannel(channel)
+            _uiState.update { it.copy(pinnedChannel = channel) }
             // A channel from another category (for example one opened from Sports) would not be in the
             // list; show all channels so it can be found and selected.
             if (_uiState.value.channels.none { it.id == channelId } &&

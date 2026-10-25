@@ -17,6 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.launch
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
 import com.streamvault.domain.model.Channel
@@ -71,7 +75,11 @@ fun LiveGuideGrid(
     }
     val verticalListState = rememberLazyListState()
     val resolvedInitialChannelId = initialFocusedChannelId ?: channels.firstOrNull()?.id
-    val initialFocusRequester = remember(resolvedInitialChannelId) { FocusRequester() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // One focus requester per channel row, so keyboard-style moves can reach rows that are not composed yet.
+    val rowRequesters = remember { HashMap<Long, FocusRequester>() }
+    fun requesterFor(channelId: Long): FocusRequester = rowRequesters.getOrPut(channelId) { FocusRequester() }
+    val initialFocusRequester = requesterFor(resolvedInitialChannelId ?: -1L)
     val initialFocusIndex = remember(channels, resolvedInitialChannelId) {
         liveGuideInitialFocusIndex(channels, resolvedInitialChannelId)
     }
@@ -134,6 +142,30 @@ fun LiveGuideGrid(
                         programsByChannel[lookupKey].orEmpty()
                     }.orEmpty()
                     val isFirstRow = index == 0
+                    androidx.compose.foundation.layout.Box(
+                        modifier = Modifier.onPreviewKeyEvent { event ->
+                            // APEX TV: holding Up/Down moves faster than the list can compose the next row, which
+                            // made focus jump out of the guide (up to the preview) before reaching the end.
+                            // When the neighbouring row is not on screen yet, scroll to it and focus it ourselves.
+                            if (event.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            val target = when (event.key) {
+                                androidx.compose.ui.input.key.Key.DirectionUp -> index - 1
+                                androidx.compose.ui.input.key.Key.DirectionDown -> index + 1
+                                else -> return@onPreviewKeyEvent false
+                            }
+                            if (target !in channels.indices) return@onPreviewKeyEvent false
+                            if (verticalListState.layoutInfo.visibleItemsInfo.any { it.index == target }) {
+                                return@onPreviewKeyEvent false
+                            }
+                            scope.launch {
+                                verticalListState.scrollToItem(target)
+                                androidx.compose.runtime.withFrameNanos { }
+                                androidx.compose.runtime.withFrameNanos { }
+                                runCatching { requesterFor(channels[target].id).requestFocus() }
+                            }
+                            true
+                        }
+                    ) {
                     LiveGuideGridRow(
                         channel = channel,
                         isFavorite = channel.id in favoriteChannelIds,
@@ -151,7 +183,7 @@ fun LiveGuideGrid(
                         markerStepMs = markerStepMs,
                         scrollState = horizontalScrollState,
                         labels = labels,
-                        focusRequester = if (channel.id == resolvedInitialChannelId) initialFocusRequester else null,
+                        focusRequester = requesterFor(channel.id),
                         onChannelClick = { onChannelClick(channel) },
                         onChannelLongClick = onChannelLongClick?.let { cb -> { prog -> cb(channel, prog) } },
                         onChannelFocused = { onChannelFocused(channel, it, isFirstRow) },
@@ -159,6 +191,7 @@ fun LiveGuideGrid(
                         onProgramLongClick = onProgramLongClick?.let { cb -> { program -> cb(channel, program) } },
                         onProgramFocused = { program -> onProgramFocused(channel, program, isFirstRow) }
                     )
+                    }
                 }
             }
         }

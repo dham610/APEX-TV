@@ -182,8 +182,11 @@ fun ChannelCard(
     isReorderMode: Boolean = false,
     isDragging: Boolean = false,
     isRecording: Boolean = false,
-    isScheduledRecording: Boolean = false
+    isScheduledRecording: Boolean = false,
+    /** 1f is the normal card; 0.5f is the compact card used on the Home shelf (name and logo only). */
+    sizeFraction: Float = 1f
 ) {
+    val compact = sizeFraction < 0.75f
     val channelCardShape = LocalAppShapes.current.small
     val hasUsableArchive = channel.archivePlaybackCapability().canBuildReplayCandidate
     val channelDescription = buildString {
@@ -211,8 +214,8 @@ fun ChannelCard(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier = modifier,
-        width = 220.dp,
-        height = 124.dp,
+        width = (220f * sizeFraction).dp,
+        height = (124f * sizeFraction).dp,
         isReorderMode = isReorderMode,
         isDragging = isDragging,
         semanticsDescription = channelDescription,
@@ -245,18 +248,18 @@ fun ChannelCard(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = if (compact) 5.dp else 10.dp, vertical = if (compact) 3.dp else 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = if (isLocked) stringResource(R.string.card_locked_channel) else channel.name,
-                style = MaterialTheme.typography.titleSmall,
+                style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.titleSmall,
                 color = if (isFocused) TextPrimary else TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
-            if (!isLocked) {
+            if (!isLocked && !compact) {
                 channel.currentProgram?.let { program ->
                     Text(
                         text = program.title,
@@ -285,7 +288,7 @@ fun ChannelCard(
             }
         }
 
-        if (!isLocked) {
+        if (!isLocked && !compact) {
             Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)

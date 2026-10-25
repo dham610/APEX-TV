@@ -449,6 +449,16 @@ fun LiveEpgScreen(
         else -> null
     }
 
+    // APEX TV: the channel being previewed is always the first row, so a channel opened from Sports (or any
+    // category not listed) can still be found, highlighted and opened from the Guide.
+    val guideChannels = remember(uiState.channels, uiState.previewChannel, uiState.pinnedChannel) {
+        val pinned = uiState.pinnedChannel ?: uiState.previewChannel?.takeIf { playing ->
+            uiState.channels.none { it.id == playing.id }
+        }
+        if (pinned == null) uiState.channels
+        else listOf(pinned) + uiState.channels.filterNot { it.id == pinned.id }
+    }
+
     scaffold(currentRoute, stringResource(R.string.nav_epg), stringResource(R.string.guide_shell_subtitle), topNavVisible) {
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
@@ -492,7 +502,7 @@ fun LiveEpgScreen(
                 .graphicsLayer { translationX = guideShift.toPx() },
             isInitialLoading = uiState.isInitialLoading,
             contentMessage = contentMessage,
-            channels = uiState.channels,
+            channels = guideChannels,
             favoriteChannelIds = uiState.favoriteChannelIds,
             programsByChannel = uiState.programsByChannel,
             guideWindowStart = uiState.guideWindowStart,
