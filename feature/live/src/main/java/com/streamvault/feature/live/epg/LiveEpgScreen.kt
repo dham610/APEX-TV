@@ -207,6 +207,8 @@ fun LiveEpgScreen(
     var focusedChannel by remember { mutableStateOf<Channel?>(null) }
     var focusedProgram by remember { mutableStateOf<Program?>(null) }
     var topNavVisible by rememberSaveable { mutableStateOf(true) }
+    // Coming back from full screen (or any dialog): always show the top tabs again.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { topNavVisible = true }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
     var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
     var reorderChannelId by remember { mutableStateOf<Long?>(null) }

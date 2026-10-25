@@ -268,8 +268,30 @@ fun LiveGuideGridRow(
                         )
                     }
                     if (programs.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(labels.noSchedule, color = OnSurfaceDim)
+                        // APEX TV: a focusable placeholder, so Up/Down/Left/Right can pass through a row with no
+                        // schedule instead of skipping it (or dropping focus) and getting stuck.
+                        TvClickableSurface(
+                            onClick = onChannelClick,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 2.dp)
+                                .onFocusChanged { if (it.isFocused) onChannelFocused(null) },
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = Color.Transparent,
+                                focusedContainerColor = SurfaceHighlight.copy(alpha = 0.6f),
+                            ),
+                            shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
+                            border = ClickableSurfaceDefaults.border(
+                                focusedBorder = Border(
+                                    border = BorderStroke(2.dp, FocusBorder),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
+                                )
+                            ),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(labels.noSchedule, color = OnSurfaceDim)
+                            }
                         }
                     } else {
                         programs.forEach { program ->
