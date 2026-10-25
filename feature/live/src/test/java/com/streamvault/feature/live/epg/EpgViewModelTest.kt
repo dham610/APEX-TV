@@ -108,6 +108,7 @@ class EpgViewModelTest {
         whenever(programReminderManager.observeUpcomingReminders()).thenReturn(flowOf(emptyList()))
         runBlocking { whenever(preferencesRepository.getCustomChannelOrder(any(), any())).thenReturn(emptyList()) }
         runBlocking { whenever(preferencesRepository.hasImportedTiviMateSetup()).thenReturn(true) }
+        runBlocking { whenever(preferencesRepository.hasAppliedSportsCategoryHiding()).thenReturn(true) }
     }
 
     @After

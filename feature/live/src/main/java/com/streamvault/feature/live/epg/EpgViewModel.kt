@@ -134,6 +134,7 @@ data class EpgUiState(
     val pinnedChannel: Channel? = null,
 ) {
     companion object {
+
         private val DEFAULT_NOW = System.currentTimeMillis()
     }
 }
@@ -263,6 +264,12 @@ private data class GuideFallbackContext(
     val guideSourcePolicy: GuideSourcePolicy?
 )
 
+private val SPORTS_FOCUS_HIDDEN = setOf(
+    "FRANCE", "CANADA", "CA-SPORTS", "CA-FRENCH", "LATINO", "LATINO LOCALS", "INDIAN", "AUSTRALIA",
+    "CARIBBEAN", "FILIPINO", "ITALIAN", "GREEK", "ARABIC", "MUSIC", "RACING", "US-SAMSUNG",
+    "LOW BANDWIDTH", "TEST", "CATEGORY 0", "UNITED KINGDOM",
+)
+
 @HiltViewModel
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class EpgViewModel @Inject constructor(
@@ -334,6 +341,27 @@ class EpgViewModel @Inject constructor(
 
     init {
         restoreGuidePreferences()
+        viewModelScope.launch {
+            // APEX TV: one-time hide of categories a sports-focused setup doesn't need (reversible in Settings).
+            runCatching {
+                if (!preferencesRepository.hasAppliedSportsCategoryHiding()) {
+                    val state = _uiState.first { it.categories.size > 5 }
+                    val providerId = baseGuideSnapshot.value?.providerId?.takeIf { it > 0L }
+                        ?: providerRepository.getActiveProvider().first()?.id
+                    if (providerId != null) {
+                        val toHide = state.categories
+                            .filter { !it.isVirtual && it.name.trim().uppercase() in SPORTS_FOCUS_HIDDEN }
+                            .map { it.id }.toSet()
+                        if (toHide.isNotEmpty()) {
+                            val current = preferencesRepository.getHiddenCategoryIds(providerId, ContentType.LIVE).first()
+                            preferencesRepository.setHiddenCategoryIds(providerId, ContentType.LIVE, current + toHide)
+                            android.util.Log.i("ApexImport", "hid ${toHide.size} categories")
+                            preferencesRepository.markSportsCategoryHidingApplied()
+                        }
+                    }
+                }
+            }
+        }
         viewModelScope.launch {
             runCatching {
                 if (!preferencesRepository.hasImportedTiviMateSetup()) {

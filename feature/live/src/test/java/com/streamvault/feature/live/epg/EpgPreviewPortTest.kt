@@ -80,6 +80,7 @@ class EpgPreviewPortTest {
         whenever(combinedM3uRepository.getActiveLiveSource()).thenReturn(flowOf(null))
         runBlocking {
             whenever(preferencesRepository.hasImportedTiviMateSetup()).thenReturn(true)
+            whenever(preferencesRepository.hasAppliedSportsCategoryHiding()).thenReturn(true)
             whenever(preferencesRepository.getCustomChannelOrder(org.mockito.kotlin.any(), org.mockito.kotlin.any())).thenReturn(emptyList())
         }
         whenever(preferencesRepository.parentalControlLevel).thenReturn(flowOf(0))

@@ -259,6 +259,13 @@ class PreferencesRepository @Inject constructor(
         preferencesDataStore.edit { it[intPreferencesKey("apex_espn_definition_version")] = version }
     }
 
+    suspend fun hasAppliedSportsCategoryHiding(): Boolean =
+        preferencesDataStore.data.first()[booleanPreferencesKey("apex_sports_category_hide_v1")] == true
+
+    suspend fun markSportsCategoryHidingApplied() {
+        preferencesDataStore.edit { it[booleanPreferencesKey("apex_sports_category_hide_v1")] = true }
+    }
+
     suspend fun hasImportedTiviMateSetup(): Boolean =
         preferencesDataStore.data.first()[booleanPreferencesKey("apex_tivimate_imported_v1")] == true
 
