@@ -199,7 +199,25 @@ fun LiveGuideGrid(
                         onChannelFocused = { onChannelFocused(channel, it, isFirstRow) },
                         onProgramClick = { program -> onProgramClick(channel, program) },
                         onProgramLongClick = onProgramLongClick?.let { cb -> { program -> cb(channel, program) } },
-                        onProgramFocused = { program -> onProgramFocused(channel, program, isFirstRow) }
+                        onProgramFocused = { program ->
+                            // APEX TV: scroll by time, like TiviMate. A programme already partly visible never moves
+                            // the timeline; one off screen is nudged in with a bit of margin.
+                            val viewDurMs = (timelineViewportWidth.value / totalTimelineWidth.value * totalDuration).toLong()
+                            val viewLeftMs = guideWindowStart + (horizontalScrollState.value.toFloat() /
+                                with(screenDensity) { totalTimelineWidth.toPx() } * totalDuration).toLong()
+                            val viewRightMs = viewLeftMs + viewDurMs
+                            val targetLeftMs = when {
+                                program.endTime <= viewLeftMs -> program.endTime - (viewDurMs * 0.85f).toLong()
+                                program.startTime >= viewRightMs -> program.startTime - (viewDurMs * 0.15f).toLong()
+                                else -> null
+                            }
+                            if (targetLeftMs != null) {
+                                val px = (((targetLeftMs - guideWindowStart).toFloat() / totalDuration.toFloat()) *
+                                    with(screenDensity) { totalTimelineWidth.toPx() }).toInt()
+                                scope.launch { horizontalScrollState.animateScrollTo(px.coerceAtLeast(0)) }
+                            }
+                            onProgramFocused(channel, program, isFirstRow)
+                        }
                     )
                     }
                 }

@@ -276,7 +276,16 @@ fun LiveGuideGridRow(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(vertical = 2.dp)
-                                .onFocusChanged { if (it.isFocused) onChannelFocused(null) },
+                                .onFocusChanged { if (it.isFocused) onChannelFocused(null) }
+                                .bringIntoViewResponder(
+                                    visiblePartResponder(
+                                        scrollPx = { scrollState.value },
+                                        cellLeftPx = 0f,
+                                        viewportPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+                                            timelineViewportWidth.toPx()
+                                        },
+                                    )
+                                ),
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = Color.Transparent,
                                 focusedContainerColor = SurfaceHighlight.copy(alpha = 0.6f),
@@ -480,18 +489,15 @@ private fun visiblePartResponder(
         val viewLeft = scrollPx().toFloat()
         val viewRight = viewLeft + viewportPx
         val cellRight = cellLeftPx + localRect.right
-        // A cell completely off screen: ask for only the edge nearest the screen, at most half a viewport, so
-        // moving onto a long programme nudges the timeline instead of jumping to that programme's start.
-        val maxSlice = viewportPx * 0.5f
+        // A cell completely off screen: ask for a point that is already on screen so this never scrolls.
+        // Horizontal scrolling is handled by the Guide itself (see LiveGuideGrid), by time, not by cell edges.
         if (cellLeftPx >= viewRight) {
-            return androidx.compose.ui.geometry.Rect(
-                localRect.left, localRect.top, minOf(localRect.right, localRect.left + maxSlice), localRect.bottom,
-            )
+            val x = viewRight - cellLeftPx - 2f
+            return androidx.compose.ui.geometry.Rect(x, localRect.top, x + 1f, localRect.bottom)
         }
         if (cellRight <= viewLeft) {
-            return androidx.compose.ui.geometry.Rect(
-                maxOf(localRect.left, localRect.right - maxSlice), localRect.top, localRect.right, localRect.bottom,
-            )
+            val x = viewLeft - cellLeftPx + 2f
+            return androidx.compose.ui.geometry.Rect(x, localRect.top, x + 1f, localRect.bottom)
         }
         val left = (viewLeft - cellLeftPx).coerceAtLeast(localRect.left)
         val right = (viewRight - cellLeftPx).coerceAtMost(localRect.right)
