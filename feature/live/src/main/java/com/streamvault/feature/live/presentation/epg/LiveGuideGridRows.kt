@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -410,9 +411,24 @@ fun LiveGuideProgramItem(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier = Modifier
-            .padding(start = itemStart, top = outerVerticalPadding, bottom = outerVerticalPadding)
-            .width(itemWidth)
-            .fillMaxHeight()
+            // APEX TV: show only the part of a programme that is on screen. A game that started at 3:30 PM, seen at
+            // 4:45 PM, is drawn from the left edge of the timeline, so Up/Down keep you in the current time column
+            // and the guide never has to scroll back to the programme's real start.
+            .layout { measurable, constraints ->
+                val cellLeftPx = itemStart.roundToPx()
+                val cellWidthPx = itemWidth.roundToPx()
+                val minVisiblePx = 6.dp.roundToPx().coerceAtMost(cellWidthPx)
+                val clipPx = ((scrollState?.value ?: 0) - cellLeftPx).coerceIn(0, (cellWidthPx - minVisiblePx).coerceAtLeast(0))
+                val visibleWidth = (cellWidthPx - clipPx).coerceAtLeast(1)
+                val placeable = measurable.measure(
+                    androidx.compose.ui.unit.Constraints.fixed(
+                        visibleWidth,
+                        if (constraints.hasBoundedHeight) constraints.maxHeight else constraints.minHeight,
+                    )
+                )
+                layout(cellLeftPx + cellWidthPx, placeable.height) { placeable.place(cellLeftPx + clipPx, 0) }
+            }
+            .padding(top = outerVerticalPadding, bottom = outerVerticalPadding)
             .onFocusChanged {
                 if (it.isFocused && !isFocused) {
                     onFocused()
