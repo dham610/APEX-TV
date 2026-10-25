@@ -260,10 +260,10 @@ class PreferencesRepository @Inject constructor(
     }
 
     suspend fun hasAppliedSportsCategoryHiding(): Boolean =
-        preferencesDataStore.data.first()[booleanPreferencesKey("apex_sports_category_hide_v2")] == true
+        preferencesDataStore.data.first()[booleanPreferencesKey("apex_sports_category_hide_v3")] == true
 
     suspend fun markSportsCategoryHidingApplied() {
-        preferencesDataStore.edit { it[booleanPreferencesKey("apex_sports_category_hide_v2")] = true }
+        preferencesDataStore.edit { it[booleanPreferencesKey("apex_sports_category_hide_v3")] = true }
     }
 
     suspend fun hasImportedTiviMateSetup(): Boolean =
