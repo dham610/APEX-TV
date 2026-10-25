@@ -251,6 +251,14 @@ class PreferencesRepository @Inject constructor(
         preferencesDataStore.edit { it[booleanPreferencesKey("apex_espn_seeded")] = true }
     }
 
+    /** APEX TV: which version of the built-in ESPN definition this install last applied. */
+    suspend fun getEspnSportsDefinitionVersion(): Int =
+        preferencesDataStore.data.first()[intPreferencesKey("apex_espn_definition_version")] ?: 1
+
+    suspend fun setEspnSportsDefinitionVersion(version: Int) {
+        preferencesDataStore.edit { it[intPreferencesKey("apex_espn_definition_version")] = version }
+    }
+
     suspend fun hasFollowedTeamsSetting(): Boolean =
         preferencesDataStore.data.first().contains(stringSetPreferencesKey("apex_followed_teams"))
 

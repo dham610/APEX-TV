@@ -51,7 +51,7 @@ internal class SportsChannelIndex private constructor(
         val channel = entries[index].channel
         setOf(channel.name, channel.canonicalName).filter(String::isNotBlank).mapTo(mutableSetOf()) { name ->
             SportsTextNormalizer.normalize(ChannelNormalizer.classify(name, channel.providerId).canonicalName)
-        }
+        } + SportsNetworkAliases.keysForChannel(channel.name)
     }
 
     val byCanonicalName: Map<String, List<Int>> by lazy {
@@ -127,6 +127,7 @@ internal object SportsChannelFallbackMatcher {
     private const val TEAM_PAIR_SCORE = 100
     private const val EVENT_NAME_SCORE = 90
     private const val BROADCASTER_SCORE = 110
+    private const val AFFILIATE_PENALTY = 10
     private const val SERIES_SCORE = 15
     private const val MATCHING_DATE_SCORE = 20
     private const val MIN_DISTINCTIVE_SURNAME_LENGTH = 5
@@ -209,9 +210,15 @@ internal object SportsChannelFallbackMatcher {
         val leagueAliases = SportsLeagueRegistry.aliasesFor(event.league)
             .mapTo(mutableSetOf(), SportsTextNormalizer::normalize)
         val eventTokens = eventSpecificTokens(event, leagueAliases)
-        val broadcasterNames = event.provenance.broadcasters?.value.orEmpty()
+        val eventBroadcasters = event.provenance.broadcasters?.value.orEmpty()
             .filter { it.type != com.streamvault.domain.sports.provider.ProviderBroadcastType.RADIO }
-            .map { broadcaster -> broadcaster.normalizedChannelName() }
+        // APEX TV: known networks match by network key only (so "AU: ESPN" is not the US feed), and
+        // "ESPN+" must not fall back to a plain "espn" name match against the linear channel.
+        val broadcasterNames = (eventBroadcasters
+            .filterNot { SportsNetworkAliases.isStreamingOnly(it.name) }
+            .filter { SportsNetworkAliases.keysForBroadcaster(it.name).isEmpty() }
+            .map { broadcaster -> broadcaster.normalizedChannelName() } +
+            eventBroadcasters.flatMap { SportsNetworkAliases.keysForBroadcaster(it.name) })
             .filter(String::isNotBlank)
             .toSet()
         val queryTokens = buildSet {
@@ -220,9 +227,10 @@ internal object SportsChannelFallbackMatcher {
             }
             addAll(eventTokens)
             // League-only candidates cannot establish event or broadcaster identity.
-            broadcasterNames.forEach { broadcaster ->
+            broadcasterNames.filterNot { ':' in it }.forEach { broadcaster ->
                 addAll(broadcaster.split(' ').filter(String::isNotBlank))
             }
+            eventBroadcasters.forEach { addAll(SportsNetworkAliases.searchTokens(it.name)) }
         }
         if (queryTokens.isEmpty()) return emptyList()
 
@@ -327,7 +335,8 @@ internal object SportsChannelFallbackMatcher {
         val hasCompetitorPair = competitorAliases.size >= 2 && competitorAliases
             .take(2)
             .all { aliases -> aliases.any { alias -> containsPhrase(channelName, alias) } }
-        val hasBroadcasterMatch = broadcasterNames.any(channelBroadcasterNames::contains)
+        val matchedBroadcasters = broadcasterNames.filterTo(mutableSetOf(), channelBroadcasterNames::contains)
+        val hasBroadcasterMatch = matchedBroadcasters.isNotEmpty()
         val reasons = linkedSetOf<SportsChannelMatchReason>()
         var score = 0
         var hasEventIdentityMatch = false
@@ -358,7 +367,12 @@ internal object SportsChannelFallbackMatcher {
             }
         }
         if (hasBroadcasterMatch) {
-            score += BROADCASTER_SCORE
+            // APEX TV: local affiliates rank just below the network's national feed.
+            score += if (SportsNetworkAliases.isAffiliateOnly(matchedBroadcasters)) {
+                BROADCASTER_SCORE - AFFILIATE_PENALTY
+            } else {
+                BROADCASTER_SCORE
+            }
             reasons += SportsChannelMatchReason.BROADCASTER
         }
         if (!hasEventIdentityMatch && !hasBroadcasterMatch) return null

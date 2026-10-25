@@ -3,6 +3,7 @@ package com.streamvault.data.sports.espn
 import com.google.common.truth.Truth.assertThat
 import com.streamvault.data.sports.custom.CustomSportsProviderDefinition
 import com.streamvault.data.sports.custom.CustomSportsProviderJsonMapper
+import com.streamvault.domain.sports.provider.ProviderBroadcastType
 import com.streamvault.domain.sports.provider.ProviderGameState
 import com.streamvault.domain.sports.provider.SportsProviderResult
 import kotlinx.serialization.json.Json
@@ -34,5 +35,46 @@ class EspnPublicSportsProviderTest {
         val first = events.first()
         assertThat(first.competitors.map { it.name }).containsExactly("Charlotte Hornets", "Miami Heat")
         assertThat(first.status?.state).isEqualTo(ProviderGameState.SCHEDULED)
+    }
+
+    // Trimmed copy of a real ESPN UFC card: each bout is its own competition and the main event is last.
+    private val ufcCard = """{"events": [{"id": "600058474", "date": "2026-10-24T14:00Z", "name": "UFC 333: Volkanovski vs. Evloev", "status": {"type": {"state": "pre"}}, "competitions": [{"competitors": [{"athlete": {"id": "1", "displayName": "Nicolle Caliari"}}, {"athlete": {"id": "2", "displayName": "Iasmin Lucindo"}}], "geoBroadcasts": [{"type": {"shortName": "Streaming"}, "media": {"shortName": "Paramount+"}, "lang": "en", "region": "us"}]}, {"competitors": [{"athlete": {"id": "3", "displayName": "Alexander Volkanovski"}}, {"athlete": {"id": "4", "displayName": "Movsar Evloev"}}], "geoBroadcasts": [{"type": {"shortName": "Streaming"}, "media": {"shortName": "Paramount+"}, "lang": "en", "region": "us"}]}]}]}"""
+
+    private val nflGame = """{"events": [{"id": "401", "date": "2026-10-25T13:30Z", "name": "Pittsburgh Steelers at New Orleans Saints", "status": {"type": {"state": "pre"}}, "competitions": [{"competitors": [{"homeAway": "home", "team": {"id": "18", "displayName": "New Orleans Saints"}}, {"homeAway": "away", "team": {"id": "23", "displayName": "Pittsburgh Steelers"}}], "geoBroadcasts": [{"type": {"shortName": "TV"}, "market": {"type": "National"}, "media": {"shortName": "NFL Net"}, "lang": "en", "region": "us"}]}]}]}"""
+
+    private fun map(body: String, sport: String, leagueId: String) = (CustomSportsProviderJsonMapper.events(
+        CustomSportsProviderDefinition.parse(EspnPublicSportsProvider.DEFINITION_JSON.trim()).events,
+        Json.parseToJsonElement(body),
+        sportFallback = sport,
+        leagueIdFallback = leagueId,
+        leagueNameFallback = null,
+    ) as SportsProviderResult.Success).value.items
+
+    @Test
+    fun collegeScopesRequestAllOfDivisionOneAndProScopesDoNot() {
+        val scopes = CustomSportsProviderDefinition.parse(EspnPublicSportsProvider.DEFINITION_JSON.trim()).scopes
+            .associateBy { it.leagueId }
+        assertThat(scopes.getValue("college-football").query).containsExactly("groups", "90")
+        assertThat(scopes.getValue("mens-college-basketball").query).containsExactly("groups", "50")
+        assertThat(scopes.getValue("womens-college-basketball").query).containsExactly("groups", "50")
+        assertThat(scopes.getValue("nfl").query).isEmpty()
+        assertThat(scopes.keys).contains("ufc")
+    }
+
+    @Test
+    fun ufcCardUsesMainEventFightersAndStreamingService() {
+        val event = map(ufcCard, "mma", "ufc").single()
+        assertThat(event.title).isEqualTo("UFC 333: Volkanovski vs. Evloev")
+        assertThat(event.competitors.map { it.name }).containsExactly("Alexander Volkanovski", "Movsar Evloev")
+        assertThat(event.broadcasters.map { it.name }).containsExactly("Paramount+")
+        assertThat(event.broadcasters.single().type).isEqualTo(ProviderBroadcastType.STREAMING_SERVICE)
+    }
+
+    @Test
+    fun teamGameCarriesItsTvNetwork() {
+        val event = map(nflGame, "football", "nfl").single()
+        assertThat(event.competitors.map { it.name }).containsExactly("New Orleans Saints", "Pittsburgh Steelers")
+        assertThat(event.broadcasters.map { it.name }).containsExactly("NFL Net")
+        assertThat(event.broadcasters.single().type).isEqualTo(ProviderBroadcastType.LINEAR_TV)
     }
 }

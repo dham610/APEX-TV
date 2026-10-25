@@ -256,6 +256,7 @@
     <string name="live_sports_retry">Try again</string>
     <string name="live_sports_play_channel_content_description">Watch on %1$s</string>
     <string name="live_sports_upcoming">Upcoming</string>
+    <string name="live_sports_status_final">Final</string>
     <string name="live_sports_filter_football">Football</string>
     <string name="live_sports_filter_basketball">Basketball</string>
     <string name="live_sports_filter_motorsport">Motorsport</string>

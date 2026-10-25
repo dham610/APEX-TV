@@ -86,7 +86,11 @@ internal object SportsEventAssembler {
             SportsBroadcast(candidate.channel, candidate.combinedProfileId)
         }.distinctBy { broadcast ->
             "${broadcast.channel.providerId}:${broadcast.channel.id}"
-        }.sortedBy { it.channel.name.lowercase() }
+        }.sortedWith(compareBy(
+            // APEX TV: national feeds before local stations and foreign feeds, then by name.
+            { SportsNetworkAliases.channelRank(it.channel.name) },
+            { it.channel.name.lowercase() },
+        ))
         val competitors = flatMap { candidate ->
             candidate.classification.competitors.map { displayName ->
                 SportsCompetitor(SportsTextNormalizer.stripGuideTags(displayName))

@@ -177,8 +177,7 @@ internal fun SportsHubContent(
     val visibleEvents = state.events.filter { it.matchesDiscovery(state) }.sortedBy { it.startTime }
     val eflChampionshipLabel = stringResource(R.string.live_sports_league_efl_championship)
     val availableLeagues = state.events.asSequence()
-        .filter { it.matches(state.selectedSportFilter) && it.sport.discoveryKey !in state.excludedSports &&
-            it.leagueFilterKey !in state.excludedLeagues }
+        .filter { it.sport.discoveryKey !in state.excludedSports && it.leagueFilterKey !in state.excludedLeagues }
         .mapNotNull { event -> event.leagueFilterKey?.let { key ->
             SportsLeagueFilterOption(key, event.localizedLeagueName(eflChampionshipLabel).orEmpty())
         } }
@@ -223,7 +222,7 @@ internal fun SportsHubContent(
                     showUnverified = state.showUnverified,
                     onToggleUnverified = { onSetShowUnverified(!state.showUnverified) },
                 ) {
-                    SportsSportFilters(state.selectedSportFilter, onSelectSportFilter)
+                    // APEX TV: the sport row ("Football" meant soccer) is gone; leagues are the only filter.
                 }
                 if (availableLeagues.isNotEmpty()) {
                     SportsLeagueFilters(availableLeagues, state.selectedLeagueFilter, onSelectLeagueFilter)
@@ -362,43 +361,6 @@ private fun SportsTimeRangeFilters(
 }
 
 @Composable
-private fun SportsSportFilters(
-    selected: SportsSportFilter,
-    onSelected: (SportsSportFilter) -> Unit,
-) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(3.dp).focusGroup(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        SportsFilterButton(
-            label = stringResource(R.string.home_quick_filters_all),
-            selected = selected == SportsSportFilter.ALL,
-            onClick = { onSelected(SportsSportFilter.ALL) },
-        )
-        SportsFilterButton(
-            label = stringResource(R.string.live_sports_filter_football),
-            selected = selected == SportsSportFilter.FOOTBALL,
-            onClick = { onSelected(SportsSportFilter.FOOTBALL) },
-        )
-        SportsFilterButton(
-            label = stringResource(R.string.live_sports_filter_basketball),
-            selected = selected == SportsSportFilter.BASKETBALL,
-            onClick = { onSelected(SportsSportFilter.BASKETBALL) },
-        )
-        SportsFilterButton(
-            label = stringResource(R.string.live_sports_filter_motorsport),
-            selected = selected == SportsSportFilter.MOTORSPORT,
-            onClick = { onSelected(SportsSportFilter.MOTORSPORT) },
-        )
-        SportsFilterButton(
-            label = stringResource(R.string.live_sports_filter_other),
-            selected = selected == SportsSportFilter.OTHER,
-            onClick = { onSelected(SportsSportFilter.OTHER) },
-        )
-    }
-}
-
-@Composable
 private fun SportsLeagueFilters(
     leagues: List<SportsLeagueFilterOption>,
     selected: String?,
@@ -531,7 +493,13 @@ private fun EventEyebrow(event: SportsEvent, isLive: Boolean) {
                 color = BrowseColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (isLive) LiveBadge()
             sourcedStatus?.value?.let { status ->
-                val liveDetail = listOfNotNull(status.period, status.clock, status.detail)
+                // APEX TV: ESPN sends period 0 and clock 0:00 before kickoff, so only show them while live.
+                val inPlay = status.state == ProviderGameState.LIVE
+                val finalLabel = stringResource(R.string.live_sports_status_final)
+                    .takeIf { status.state == ProviderGameState.FINAL }
+                val liveDetail = listOfNotNull(
+                    finalLabel, status.period.takeIf { inPlay }, status.clock.takeIf { inPlay }, status.detail,
+                )
                     .map(String::trim)
                     .filter(String::isNotEmpty)
                     .distinct()
@@ -611,9 +579,16 @@ private fun attributionText(attribution: SportsAttributionCredit): String = when
     )
 }
 
-private fun SportsEvent.isLiveAt(nowMillis: Long): Boolean =
-    provenance.status?.value?.state == ProviderGameState.LIVE ||
-        broadcastStatusAt(nowMillis) == SportsBroadcastStatus.ON_AIR
+// APEX TV: when the schedule feed says a game is over, the guide slot still running does not make it live.
+private fun SportsEvent.isLiveAt(nowMillis: Long): Boolean {
+    val state = provenance.status?.value?.state
+    if (state in finishedStates) return false
+    return state == ProviderGameState.LIVE || broadcastStatusAt(nowMillis) == SportsBroadcastStatus.ON_AIR
+}
+
+private val finishedStates = setOf(
+    ProviderGameState.FINAL, ProviderGameState.CANCELLED, ProviderGameState.POSTPONED,
+)
 
 private fun SportsEvent.localizedLeagueName(eflChampionshipLabel: String): String? =
     if (leagueInfo?.id == "efl-championship") eflChampionshipLabel

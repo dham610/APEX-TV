@@ -29,6 +29,64 @@ class SportsChannelFallbackMatcherTest {
         assertEquals(listOf(2L, 1L), matches.map { it.entry.channel.id })
     }
 
+    private fun withBroadcasters(vararg names: String): SportsEvent {
+        val source = SportsSourceRef.Provider("espn-public", "custom", "401")
+        return event(
+            title = "Pittsburgh Steelers at New Orleans Saints",
+            league = "NFL",
+            sport = SportType.AMERICAN_FOOTBALL,
+            competitors = listOf("New Orleans Saints", "Pittsburgh Steelers"),
+        ).copy(provenance = SportsEventProvenance(
+            broadcasters = SourcedValue(names.map { ProviderBroadcaster(it) }, source),
+        ))
+    }
+
+    @Test fun espnShortNetworkNamesFindPrefixedIptvChannels() {
+        val index = SportsChannelIndex.build(listOf(
+            channel(1, "US-S: NFL NETWORK"), channel(2, "US: FOX EAST"), channel(3, "US: FOX NEWS"),
+            channel(4, "US-S: CBS SPORTS NETWORK"), channel(5, "US-S: ESPN 2"),
+        ).map(::entry))
+        fun idsFor(vararg names: String) = SportsChannelFallbackMatcher
+            .findMatches(withBroadcasters(*names), index, zoneId = utc).map { it.entry.channel.id }.toSet()
+        assertEquals(setOf(1L), idsFor("NFL Net"))
+        assertEquals(setOf(2L), idsFor("Fox"))
+        assertEquals(setOf(4L), idsFor("CBSSN"))
+        assertEquals(setOf(5L), idsFor("ESPN2"))
+    }
+
+    @Test fun streamingPlusServicesDoNotMatchTheLinearNetwork() {
+        val index = SportsChannelIndex.build(listOf(channel(1, "US-SD | ESPN"), channel(2, "US-S: ESPN")).map(::entry))
+        val matches = SportsChannelFallbackMatcher.findMatches(withBroadcasters("ESPN+"), index, zoneId = utc)
+        assertTrue(matches.isEmpty())
+    }
+
+    @Test fun foreignFeedsAndBracketedLocalStationsRankBelowUsNationalFeed() {
+        val index = SportsChannelIndex.build(listOf(
+            channel(1, "AU: ESPN"), channel(2, "CAR: ESPN (TEST)"), channel(3, "US-S: ESPN"),
+        ).map(::entry))
+        assertEquals(listOf(3L), SportsChannelFallbackMatcher
+            .findMatches(withBroadcasters("ESPN"), index, zoneId = utc).map { it.entry.channel.id })
+        assertEquals(setOf("aff:fox"), SportsNetworkAliases.keysForChannel("TX | Sherman | FOX (KXII)"))
+        assertEquals(setOf("aff:nbc"), SportsNetworkAliases.keysForChannel("CA | Los Angeles | NBC KNBC"))
+        assertTrue(SportsNetworkAliases.keysForChannel("CA-S: NFL NETWORK").isEmpty())
+    }
+
+    @Test fun channelRankPutsNationalFeedsFirst() {
+        val names = listOf("AK | Anchorage | ABC KYUR", "AU: ESPN", "NCAAF 04: ABC", "US: ABC EAST", "US (ESPN+ 073) | Game")
+        assertEquals(
+            listOf("NCAAF 04: ABC", "US: ABC EAST", "US (ESPN+ 073) | Game", "AK | Anchorage | ABC KYUR", "AU: ESPN"),
+            names.sortedWith(compareBy({ SportsNetworkAliases.channelRank(it) }, { it.lowercase() })),
+        )
+    }
+
+    @Test fun nationalFeedRanksAboveLocalAffiliate() {
+        val index = SportsChannelIndex.build(listOf(
+            channel(1, "AL | Birmingham | FOX WBRC"), channel(2, "US: FOX WEST"),
+        ).map(::entry))
+        val matches = SportsChannelFallbackMatcher.findMatches(withBroadcasters("Fox"), index, zoneId = utc)
+        assertEquals(listOf(2L, 1L), matches.map { it.entry.channel.id })
+    }
+
     @Test
     fun teamMatchRequiresBothCompetitorsAndSupportsAliases() {
         val event = teamEvent()

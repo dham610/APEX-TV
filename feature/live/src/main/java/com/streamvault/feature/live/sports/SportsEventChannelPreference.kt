@@ -9,8 +9,16 @@ internal fun SportsBroadcast.channelIdentityKey(): String =
     "${channel.providerId}:${channel.id}"
 
 internal fun SportsEvent.broadcastsForPresentation(): List<SportsBroadcast> {
-    val preferredKey = rememberedChannelKey ?: return broadcasts
-    return broadcasts.sortedBy { broadcast -> broadcast.channelIdentityKey() != preferredKey }
+    val preferredKey = rememberedChannelKey
+    // APEX TV: after a remembered pick, offer the network the schedule lists (ABC for an ABC game) first.
+    val listedNetworks = provenance.broadcasters?.value.orEmpty()
+        .flatMap { SportsNetworkAliases.keysForBroadcaster(it.name) }
+        .filterTo(mutableSetOf()) { it.startsWith("net:") }
+    if (preferredKey == null && listedNetworks.isEmpty()) return broadcasts
+    return broadcasts.sortedWith(compareBy(
+        { broadcast -> preferredKey == null || broadcast.channelIdentityKey() != preferredKey },
+        { broadcast -> SportsNetworkAliases.keysForChannel(broadcast.channel.name).none(listedNetworks::contains) },
+    ))
 }
 
 internal fun SportsEvent.rememberedBroadcast(): SportsBroadcast? {

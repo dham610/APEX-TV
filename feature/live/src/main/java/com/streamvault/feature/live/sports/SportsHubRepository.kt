@@ -147,13 +147,17 @@ internal class SportsHubRepository @Inject constructor(
         scope.launch {
             // First run: add ESPN's public scoreboard as the sports data source. It needs no key and tells
             // the Sports tab which games are really live, scheduled or finished.
+            // Later definition versions replace the saved copy, but only while ESPN is still installed.
             runCatching {
+                val espn = com.streamvault.data.sports.espn.EspnPublicSportsProvider
+                val installed = sportsProviderStore.configurations().any { it.instanceId == espn.INSTANCE_ID }
                 if (!preferencesRepository.hasSeededEspnSportsProvider()) {
-                    val existing = sportsProviderStore.configurations()
-                    if (existing.none { it.instanceId == com.streamvault.data.sports.espn.EspnPublicSportsProvider.INSTANCE_ID }) {
-                        sportsProviderStore.save(com.streamvault.data.sports.espn.EspnPublicSportsProvider.config())
-                    }
+                    if (!installed) sportsProviderStore.save(espn.config())
                     preferencesRepository.markEspnSportsProviderSeeded()
+                    preferencesRepository.setEspnSportsDefinitionVersion(espn.DEFINITION_VERSION)
+                } else if (preferencesRepository.getEspnSportsDefinitionVersion() < espn.DEFINITION_VERSION) {
+                    if (installed) sportsProviderStore.save(espn.config())
+                    preferencesRepository.setEspnSportsDefinitionVersion(espn.DEFINITION_VERSION)
                 }
             }
         }
@@ -323,7 +327,14 @@ internal class SportsHubRepository @Inject constructor(
                     fallbackChannelIndexCache = null
                     availableChannelEntries = emptyList()
                     if (previousInputs?.retry != inputs.retry) classificationCache.clear()
-                    _uiState.update { it.copy(events = emptyList(), isLoading = true, hasError = false) }
+                    // APEX TV: a background guide refresh keeps the current games on screen until the new list is
+                    // ready; clearing it showed the spinner and jumped the user back to the top. Channel changes
+                    // (sync, hidden categories) still clear it so removed channels never linger.
+                    val onlyGuideChanged = previousInputs?.copy(guideRevision = inputs.guideRevision) == inputs &&
+                        _uiState.value.events.isNotEmpty()
+                    if (!onlyGuideChanged) {
+                        _uiState.update { it.copy(events = emptyList(), isLoading = true, hasError = false) }
+                    }
                     previousInputs = inputs
                 }
                 if (active) {

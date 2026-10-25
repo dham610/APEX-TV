@@ -139,6 +139,7 @@ internal class CustomSportsProvider(
                                 definition.events.endpoint,
                                 eventVariables(scopedRequest, definition.events.dateFormat, definition.events.endpoint),
                                 credentials,
+                                extraQuery = scope.query,
                             )) {
                                 is SportsProviderResult.Failure -> response
                                 is SportsProviderResult.Success -> CustomSportsProviderJsonMapper.events(
@@ -509,10 +510,15 @@ internal class CustomSportsProvider(
         endpoint: String,
         variables: Map<String, String>,
         credentials: SportsProviderCredentials?,
+        extraQuery: Map<String, String> = emptyMap(),
     ): SportsProviderResult<JsonElement> {
         val baseUrl = config.baseUrl?.toHttpUrlOrNull()
             ?: return SportsProviderResult.Failure(SportsProviderError.INVALID_CONFIGURATION)
         val url = buildCustomSportsProviderUrl(baseUrl, endpoint, variables)
+            ?.let { built ->
+                if (extraQuery.isEmpty()) built
+                else built.newBuilder().apply { extraQuery.forEach { (key, value) -> setQueryParameter(key, value) } }.build()
+            }
             ?: return SportsProviderResult.Failure(SportsProviderError.INVALID_CONFIGURATION)
         return httpClient.get(url, definition.auth, credentials) { body ->
             Json.parseToJsonElement(body)
@@ -627,7 +633,7 @@ internal data class CustomSportsProviderDefinition(
                 require(values.size <= MAX_DECLARED_SCOPES)
                 values.map { element ->
                     val value = element.jsonObject
-                    requireKeys(value, setOf("sport", "leagueId", "leagueName"))
+                    requireKeys(value, setOf("sport", "leagueId", "leagueName", "query"))
                     val sport = value.optionalLiteral("sport")
                     val leagueId = value.optionalLiteral("leagueId")
                     require(sport != null || leagueId != null)
@@ -635,6 +641,7 @@ internal data class CustomSportsProviderDefinition(
                         sport = sport,
                         leagueId = leagueId,
                         leagueName = value.optionalLiteral("leagueName"),
+                        query = value.optionalObject("query")?.let(::parseScopeQuery).orEmpty(),
                     )
                 }.also { parsed ->
                     require(parsed.map { it.sport to it.leagueId }.distinct().size == parsed.size)
@@ -1096,6 +1103,14 @@ internal data class CustomSportsProviderDefinition(
             return value
         }
 
+        private fun parseScopeQuery(value: JsonObject): Map<String, String> {
+            require(value.size <= MAX_SCOPE_QUERY_PARAMS)
+            return value.keys.associateWith { key ->
+                require(SCOPE_QUERY_KEY.matches(key))
+                value.optionalLiteral(key) ?: throw IllegalArgumentException()
+            }
+        }
+
         private fun requireKeys(value: JsonObject, allowed: Set<String>) {
             require(value.keys.all(allowed::contains))
         }
@@ -1111,6 +1126,8 @@ internal data class CustomSportsProviderDefinition(
         private val ARTWORK_PLACEHOLDERS = setOf("entityId", "entityType", "sport", "leagueId")
         private val DETAIL_PLACEHOLDERS = setOf("eventId", "sport", "leagueId")
         private const val MAX_DECLARED_SCOPES = 50
+        private const val MAX_SCOPE_QUERY_PARAMS = 8
+        private val SCOPE_QUERY_KEY = Regex("[A-Za-z0-9_.-]{1,32}")
     }
 }
 
@@ -1118,6 +1135,8 @@ internal data class CustomSportsProviderScope(
     val sport: String? = null,
     val leagueId: String? = null,
     val leagueName: String? = null,
+    /** APEX TV: extra query parameters sent only with this scope's event requests. */
+    val query: Map<String, String> = emptyMap(),
 )
 
 internal data class CustomEventMapping(
@@ -1794,6 +1813,8 @@ internal object CustomSportsProviderJsonMapper {
 
     private fun JsonElement.select(selector: String): JsonElement? {
         if (selector == "$") return this
+        // APEX TV: "a|b" tries each alternative in order, so one mapping can cover teams and athletes.
+        if ('|' in selector) return selector.split('|').firstNotNullOfOrNull { select(it) }
         val segments = parseJsonSelector(selector, allowRoot = false)
         var current = listOf(this)
         for (segment in segments) {
@@ -1801,7 +1822,9 @@ internal object CustomSportsProviderJsonMapper {
             current.forEach { value ->
                 when (segment) {
                     is JsonSelectorSegment.Key -> (value as? JsonObject)?.get(segment.value)?.let(next::add)
-                    is JsonSelectorSegment.Index -> (value as? JsonArray)?.getOrNull(segment.value)?.let(next::add)
+                    is JsonSelectorSegment.Index -> (value as? JsonArray)?.let { array ->
+                        array.getOrNull(if (segment.value < 0) array.size + segment.value else segment.value)
+                    }?.let(next::add)
                     JsonSelectorSegment.All -> (value as? JsonArray)?.forEach(next::add)
                 }
             }
@@ -1868,9 +1891,15 @@ private sealed interface JsonSelectorSegment {
 
 private fun parseJsonSelector(selector: String, allowRoot: Boolean): List<JsonSelectorSegment> {
     if (allowRoot && selector == "$") return emptyList()
+    if ('|' in selector) {
+        val alternatives = selector.split('|')
+        require(alternatives.size <= MAX_SELECTOR_ALTERNATIVES)
+        alternatives.forEach { parseJsonSelector(it, allowRoot = false) }
+        return emptyList()
+    }
     val path = selector.removePrefix("$.")
     require(path.isNotBlank())
-    val pathPart = Regex("([A-Za-z0-9_-]{1,64})(?:\\[(\\*|\\d{1,4})\\])?")
+    val pathPart = Regex("([A-Za-z0-9_-]{1,64})(?:\\[(\\*|-?\\d{1,4})\\])?")
     val segments = mutableListOf<JsonSelectorSegment>()
     for (part in path.split('.')) {
         val match = pathPart.matchEntire(part) ?: throw IllegalArgumentException()
@@ -1886,6 +1915,7 @@ private fun parseJsonSelector(selector: String, allowRoot: Boolean): List<JsonSe
 }
 
 private const val MAX_SELECTOR_DEPTH = 16
+private const val MAX_SELECTOR_ALTERNATIVES = 4
 
 /** Resolve paths beneath the configured API base path; dynamic values are percent encoded. */
 internal fun buildCustomSportsProviderUrl(
