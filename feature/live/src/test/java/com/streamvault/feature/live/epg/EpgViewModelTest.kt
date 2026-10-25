@@ -107,6 +107,7 @@ class EpgViewModelTest {
         whenever(recordingManager.observeRecordingItems()).thenReturn(flowOf(emptyList()))
         whenever(programReminderManager.observeUpcomingReminders()).thenReturn(flowOf(emptyList()))
         runBlocking { whenever(preferencesRepository.getCustomChannelOrder(any(), any())).thenReturn(emptyList()) }
+        runBlocking { whenever(preferencesRepository.hasImportedTiviMateSetup()).thenReturn(true) }
     }
 
     @After

@@ -259,6 +259,13 @@ class PreferencesRepository @Inject constructor(
         preferencesDataStore.edit { it[intPreferencesKey("apex_espn_definition_version")] = version }
     }
 
+    suspend fun hasImportedTiviMateSetup(): Boolean =
+        preferencesDataStore.data.first()[booleanPreferencesKey("apex_tivimate_imported_v1")] == true
+
+    suspend fun markTiviMateSetupImported() {
+        preferencesDataStore.edit { it[booleanPreferencesKey("apex_tivimate_imported_v1")] = true }
+    }
+
     suspend fun hasFollowedTeamsSetting(): Boolean =
         preferencesDataStore.data.first().contains(stringSetPreferencesKey("apex_followed_teams"))
 

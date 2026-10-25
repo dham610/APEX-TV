@@ -78,6 +78,10 @@ class EpgPreviewPortTest {
         whenever(playerEngine.error).thenReturn(flowOf(null))
         whenever(providerRepository.getActiveProvider()).thenReturn(flowOf(null))
         whenever(combinedM3uRepository.getActiveLiveSource()).thenReturn(flowOf(null))
+        runBlocking {
+            whenever(preferencesRepository.hasImportedTiviMateSetup()).thenReturn(true)
+            whenever(preferencesRepository.getCustomChannelOrder(org.mockito.kotlin.any(), org.mockito.kotlin.any())).thenReturn(emptyList())
+        }
         whenever(preferencesRepository.parentalControlLevel).thenReturn(flowOf(0))
         whenever(preferencesRepository.showAllChannelsCategory).thenReturn(flowOf(true))
         whenever(preferencesRepository.guideDensity).thenReturn(flowOf(null))

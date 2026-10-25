@@ -334,6 +334,18 @@ class EpgViewModel @Inject constructor(
 
     init {
         restoreGuidePreferences()
+        viewModelScope.launch {
+            runCatching {
+                if (!preferencesRepository.hasImportedTiviMateSetup()) {
+                    val providerId = providerRepository.getActiveProvider().first()?.id
+                    if (providerId != null && providerId > 0L) {
+                        val report = TiviMateSetupImporter.import(providerId, channelRepository, favoriteRepository)
+                        android.util.Log.i("ApexImport", report)
+                        preferencesRepository.markTiviMateSetupImported()
+                    }
+                }
+            }.onFailure { android.util.Log.w("ApexImport", "failed", it) }
+        }
         observeGuideBase()
         observeGuidePresentation()
         observeReminderDeliveryIssues()
