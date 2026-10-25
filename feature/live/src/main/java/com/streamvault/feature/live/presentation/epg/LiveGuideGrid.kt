@@ -111,15 +111,8 @@ fun LiveGuideGrid(
         val markerStepMs = LIVE_GUIDE_MARKER_STEP_MS
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // APEX TV: open the timeline at the current time marker (data still reaches back an hour for catch-up).
-            LaunchedEffect(focusResetKey, guideWindowStart, guideWindowEnd, totalTimelineWidth) {
-                val now = System.currentTimeMillis()
-                if (now in guideWindowStart..guideWindowEnd) {
-                    val fraction = (now - guideWindowStart).toFloat() / totalDuration.toFloat()
-                    val nowPx = with(screenDensity) { (totalTimelineWidth * fraction).toPx() - 24.dp.toPx() }
-                    horizontalScrollState.scrollTo(nowPx.toInt().coerceAtLeast(0))
-                }
-            }
+            // APEX TV: the timeline starts at the current half-hour block, so open it at the start (TiviMate behaviour).
+            LaunchedEffect(focusResetKey, guideWindowStart) { horizontalScrollState.scrollTo(0) }
             LiveGuideTimelineHeader(
                 windowStart = guideWindowStart,
                 windowEnd = guideWindowEnd,

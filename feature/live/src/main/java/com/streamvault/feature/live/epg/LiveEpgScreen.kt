@@ -208,7 +208,13 @@ fun LiveEpgScreen(
     var focusedProgram by remember { mutableStateOf<Program?>(null) }
     var topNavVisible by rememberSaveable { mutableStateOf(true) }
     // Coming back from full screen (or any dialog): always show the top tabs again.
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { topNavVisible = true }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        topNavVisible = true
+        // Coming back after the half-hour block has moved on: line the guide up with the current time again.
+        if (uiState.guideWindowStart < EpgViewModel.guideWindowStartFor(System.currentTimeMillis())) {
+            viewModel.jumpToNow()
+        }
+    }
     var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
     var showCategoryPanel by rememberSaveable { mutableStateOf(false) }
     var reorderChannelId by remember { mutableStateOf<Long?>(null) }

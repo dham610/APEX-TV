@@ -118,7 +118,7 @@ data class EpgUiState(
     val lastUpdatedAt: Long? = null,
     val isGuideStale: Boolean = false,
     val guideAnchorTime: Long = DEFAULT_NOW,
-    val guideWindowStart: Long = DEFAULT_NOW - EpgViewModel.LOOKBACK_MS,
+    val guideWindowStart: Long = EpgViewModel.guideWindowStartFor(DEFAULT_NOW),
     val guideWindowEnd: Long = DEFAULT_NOW + EpgViewModel.LOOKAHEAD_MS,
     val recordingMessage: String? = null,
     val reminderMessage: String? = null,
@@ -298,6 +298,13 @@ class EpgViewModel @Inject constructor(
         private const val XTREAM_GUIDE_FALLBACK_CHUNK_SIZE = 12
         private const val MAX_XTREAM_GUIDE_FALLBACK_PROGRAMS = 6
         const val LOOKBACK_MS = 60 * 60 * 1000L
+
+        /**
+         * APEX TV: the guide starts at the half-hour block the anchor time is in (like TiviMate), so it opens on the
+         * current block and anything that started earlier is cut off at that edge instead of showing the past.
+         */
+        fun guideWindowStartFor(anchorTime: Long): Long = anchorTime - Math.floorMod(anchorTime, HALF_HOUR_BLOCK_MS)
+        private const val HALF_HOUR_BLOCK_MS = 30 * 60 * 1000L
         const val LOOKAHEAD_MS = 6 * 60 * 60 * 1000L
         const val HALF_HOUR_SHIFT_MS = 30 * 60 * 1000L
         const val WINDOW_SHIFT_MS = 3 * 60 * 60 * 1000L
@@ -1311,7 +1318,7 @@ class EpgViewModel @Inject constructor(
                             lastUpdatedAt = null,
                             isGuideStale = false,
                             guideAnchorTime = System.currentTimeMillis(),
-                            guideWindowStart = System.currentTimeMillis() - LOOKBACK_MS,
+                            guideWindowStart = guideWindowStartFor(System.currentTimeMillis()),
                             guideWindowEnd = System.currentTimeMillis() + LOOKAHEAD_MS
                         )
                     }
@@ -1390,7 +1397,7 @@ class EpgViewModel @Inject constructor(
                     parentalControlLevel = selection.parentalControlLevel,
                     anchorTime = selection.anchorTime,
                     favoritesOnly = selection.favoritesOnly,
-                    windowStart = selection.anchorTime - LOOKBACK_MS,
+                    windowStart = guideWindowStartFor(selection.anchorTime),
                     windowEnd = selection.anchorTime + LOOKAHEAD_MS,
                     guideSourcePolicy = provider.guideSourcePolicy
                 )
@@ -1486,7 +1493,7 @@ class EpgViewModel @Inject constructor(
                     parentalControlLevel = data.selection.second,
                     anchorTime = data.selection.first.anchorTime,
                     favoritesOnly = data.selection.first.favoritesOnly,
-                    windowStart = data.selection.first.anchorTime - LOOKBACK_MS,
+                    windowStart = guideWindowStartFor(data.selection.first.anchorTime),
                     windowEnd = data.selection.first.anchorTime + LOOKAHEAD_MS
                 ),
                 providerIds = data.providerIds
@@ -1801,9 +1808,8 @@ class EpgViewModel @Inject constructor(
             startupCategoryId.value = preferencesRepository.guideDefaultCategoryId.first() ?: VirtualCategoryIds.FAVORITES
             showFavoritesOnly.value = preferencesRepository.guideFavoritesOnly.first()
             showScheduledOnly.value = preferencesRepository.guideScheduledOnly.first()
-            preferencesRepository.guideAnchorTime.first()
-                ?.takeIf { it > 0L }
-                ?.let { guideAnchorTime.value = it }
+            // APEX TV: always open on the current time; a time saved from an earlier visit made the guide open hours back.
+            guideAnchorTime.value = System.currentTimeMillis()
         }
     }
 
