@@ -20,6 +20,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -344,6 +348,7 @@ fun LiveGuideProgramItem(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val pxDensity = androidx.compose.ui.platform.LocalDensity.current
+    val stepScope = androidx.compose.runtime.rememberCoroutineScope()
     val now = currentLiveGuideNow()
     val isCurrent = now in program.startTime until program.endTime
 
@@ -435,6 +440,19 @@ fun LiveGuideProgramItem(
                 }
                 isFocused = it.isFocused
             }
+            // APEX TV: Left at the left edge of the timeline steps the guide back 30 minutes (like TiviMate)
+            // instead of jumping to the channel list, so earlier programmes can be reached after scrolling ahead.
+            .onPreviewKeyEvent { event ->
+                val state = scrollState
+                if (state == null || event.type != androidx.compose.ui.input.key.KeyEventType.KeyDown ||
+                    event.key != androidx.compose.ui.input.key.Key.DirectionLeft || state.value <= 0
+                ) return@onPreviewKeyEvent false
+                val originInView = with(pxDensity) { itemStart.toPx() } - state.value
+                if (originInView > with(pxDensity) { 6.dp.toPx() }) return@onPreviewKeyEvent false
+                val halfHourPx = with(pxDensity) { totalTimelineWidth.toPx() } * (1_800_000f / totalDuration.toFloat())
+                stepScope.launch { state.animateScrollTo((state.value - halfHourPx).toInt().coerceAtLeast(0)) }
+                true
+            }
             // APEX TV: a programme that is already partly on screen must not drag the whole guide back to its
             // start time (a 12:00 show at 2:00 PM used to scroll everything to 12:00). Only the part that is
             // visible is requested, so the timeline stays on the current time like TiviMate.
@@ -500,26 +518,21 @@ private fun visiblePartResponder(
     cellLeftPx: Float,
     viewportPx: Float,
 ) = object : androidx.compose.foundation.relocation.BringIntoViewResponder {
+    // The cell is drawn clipped to the screen, so its local origin is max(real start, scroll position).
+    // Whatever part is requested is trimmed to what already fits on screen, so focusing a cell never scrolls.
     override fun calculateRectForParent(localRect: androidx.compose.ui.geometry.Rect): androidx.compose.ui.geometry.Rect {
         if (viewportPx <= 0f) return localRect
         val viewLeft = scrollPx().toFloat()
         val viewRight = viewLeft + viewportPx
-        val cellRight = cellLeftPx + localRect.right
-        // A cell completely off screen: ask for a point that is already on screen so this never scrolls.
-        // Horizontal scrolling is handled by the Guide itself (see LiveGuideGrid), by time, not by cell edges.
-        if (cellLeftPx >= viewRight) {
-            val x = viewRight - cellLeftPx - 2f
+        val originX = maxOf(cellLeftPx, viewLeft)
+        if (originX >= viewRight) {
+            val x = viewRight - originX - 2f
             return androidx.compose.ui.geometry.Rect(x, localRect.top, x + 1f, localRect.bottom)
         }
-        if (cellRight <= viewLeft) {
-            val x = viewLeft - cellLeftPx + 2f
-            return androidx.compose.ui.geometry.Rect(x, localRect.top, x + 1f, localRect.bottom)
-        }
-        val left = (viewLeft - cellLeftPx).coerceAtLeast(localRect.left)
-        val right = (viewRight - cellLeftPx).coerceAtMost(localRect.right)
-        return if (right > left) {
-            androidx.compose.ui.geometry.Rect(left, localRect.top, right, localRect.bottom)
-        } else localRect
+        val visibleWidth = viewRight - originX
+        return androidx.compose.ui.geometry.Rect(
+            localRect.left, localRect.top, minOf(localRect.right, visibleWidth).coerceAtLeast(localRect.left + 1f), localRect.bottom,
+        )
     }
 
     override suspend fun bringChildIntoView(localRect: () -> androidx.compose.ui.geometry.Rect?) = Unit
